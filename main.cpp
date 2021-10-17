@@ -8,7 +8,7 @@
 
 int main(int argc, char *argv[])
 {
-    SourceFileReader reader("../1/c5.txt");
+    SourceFileReader reader("../ship/input/1/Ship3.txt");
     SourceErrorDetector detector(reader.dat());
     //reader.constDat().printToDebug();
     return 0;

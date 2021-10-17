@@ -18,7 +18,7 @@ static constexpr const char formatSeparator{ '/' };
 
 struct Trac
 {
-    double x0, y0, x1, y1, layoutStep;
+    int x0, y0, x1, y1, layoutStep;
 };
 
 struct Ship
