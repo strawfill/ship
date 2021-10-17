@@ -12,15 +12,26 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 
-find_package(Qt5 COMPONENTS Widgets REQUIRED)
+find_package(Qt5 COMPONENTS Widgets Gui REQUIRED)
 
-add_executable(${PROJECT_NAME}
+include_directories("reader")
+
+set(READER
+    reader/rawdata.h
+    reader/rawdata.cpp
+    reader/sourceerrordetector.h
+    reader/sourceerrordetector.cpp
+    reader/sourcefilereader.h
+    reader/sourcefilereader.cpp
+    )
+
+add_executable(${PROJECT_NAME} WIN32
     main.cpp
     mainwindow.cpp
     mainwindow.h
     mainwindow.ui
-    sourcefilereader.h
-    sourcefilereader.cpp
+
+    ${READER}
   )
 
-target_link_libraries(${PROJECT_NAME} PRIVATE Qt5::Widgets)
+target_link_libraries(${PROJECT_NAME} PRIVATE Qt5::Widgets Qt5::Gui)

@@ -1,77 +1,12 @@
 #include "sourcefilereader.h"
 
+#include "rawdata.h"
+
 #include <QDebug>
 #include <QDir>
 #include <QVector>
 
-// Добавим для удобства структурки входных данных
-namespace sourceData {
-
-struct Trac
-{
-    double x0, y0, x1, y1, layoutStep;
-};
-
-struct Ship
-{
-    double speed;
-    QString name;
-    int maxSensorCount;
-    enum class Type : bool {
-        shooter,
-        handler
-    } type;
-    char unused[7];
-
-    static QChar typeToQChar(Ship::Type type) { return type == Type::shooter ? 'S' : 'H'; }
-    QChar typeToQChar() const { return typeToQChar(type); }
-};
-
-struct SensorMone
-{
-    double money{ -1. };
-};
-
-struct ShipMone
-{
-    QString name;
-    double money;
-};
-
-struct Icee
-{
-    int trackNumber;
-    double open, close;
-};
-
-struct PathDot
-{
-    double x, y, timeH;
-    int activity;
-};
-
-struct Path
-{
-    int size;
-    QString name;
-    QVector<PathDot> path;
-    Ship::Type type;
-    char unused[3];
-};
-
-struct Data
-{
-    SensorMone sensorMone;
-    QVector<Trac> trac;
-    QVector<Ship> ship;
-    QVector<ShipMone> shipMone;
-    QVector<Icee> icee;
-    QVector<Path> path;
-    char unused[4];
-};
-
-} // end sourceData namespace
-using namespace sourceData;
+using namespace raw;
 
 SourceFileReader::SourceFileReader(const QString &filename)
 {
@@ -83,6 +18,22 @@ void SourceFileReader::clear()
 {
     delete data;
     data = nullptr;
+}
+
+Data SourceFileReader::dat() const
+{
+    if (data)
+        return *data;
+    return {};
+}
+
+const Data &SourceFileReader::constDat() const
+{
+    if (data)
+        return *data;
+
+    const static Data empty;
+    return empty;
 }
 
 SourceFileReader::~SourceFileReader()
@@ -97,34 +48,90 @@ void SourceFileReader::readSourceFile(QString filename)
     Q_ASSERT(!in.sourceFile.isOpen());
     filename = QFileInfo(filename).absoluteFilePath();
     in.sourceFile.setFileName(filename);
+    if (!QFileInfo::exists(filename)) {
+        qInfo() << "Файл не существует. Заданный путь:" << filename;
+        return;
+    }
     if (!in.sourceFile.open(QIODevice::ReadOnly|QIODevice::Text)) {
         qInfo() << "Невозможно открыть файл для чтения по пути:" << filename;
         return;
     }
 
+    bool wasTrac{ false }, wasShip{ false }, wasMone{ false }, wasIcee{ false }, wasPath{ false };
+
     while (!in.fileAtEnd()) {
         in.readLine();
-        if (in.testAndSetFormat(formatTrac))
-            readTrac();
-        else if (in.testAndSetFormat(formatShip))
-            readShip();
-        else if (in.testAndSetFormat(formatMone))
-            readMone();
-        else if (in.testAndSetFormat(formatIcee))
-            readIcee();
-        else if (in.testAndSetFormat(formatPath))
-            readPath();
+        if (in.testAndSetFormat(formatTrac)) {
+            if (wasTrac) {
+                warningExtraBlock(formatTrac);
+                readFictive();
+            }
+            else {
+                readTrac();
+                wasTrac = true;
+            }
+        }
+        else if (in.testAndSetFormat(formatShip)) {
+            if (wasShip) {
+                warningExtraBlock(formatShip);
+                readFictive();
+            }
+            else {
+                readShip();
+                wasShip = true;
+            }
+        }
+        else if (in.testAndSetFormat(formatMone)) {
+            if (wasMone) {
+                warningExtraBlock(formatMone);
+                readFictive();
+            }
+            else {
+                readMone();
+                wasMone = true;
+            }
+        }
+        else if (in.testAndSetFormat(formatIcee)) {
+            if (wasIcee) {
+                warningExtraBlock(formatIcee);
+                readFictive();
+            }
+            else {
+                readIcee();
+                wasIcee = true;
+            }
+        }
+        else if (in.testAndSetFormat(formatPath)) {
+            if (wasPath) {
+                warningExtraBlock(formatPath);
+                readFictive();
+            }
+            else {
+                readPath();
+                wasPath = true;
+            }
+        }
         else if (in.currentLine.isEmpty()) {
             warningEmptyString();
         }
         else if (in.lineIsBlockEnd())
             qInfo().noquote() << QString{"Строка %1. Ожидалось ключевое слово, но был встречен лишний символ конца блока '%2'. "
-                                         "Данная строка не будет учитана"}.arg(in.strLineNumber()).arg(in.currentLine);
+                                         "Данная строка не будет учтена"}.arg(in.strLineNumber()).arg(in.currentLine);
         else {
             qInfo().noquote() << QString{"Строка %1. Ожидалось ключевое слово, но была встречена строка '%2'. "
-                                         "Данная строка не будет учитана"}.arg(in.strLineNumber()).arg(in.currentLine);
+                                         "Данная строка не будет учтена"}.arg(in.strLineNumber()).arg(in.currentLine);
         }
     }
+
+    if (!wasTrac)
+        warningNotHaveBlock(formatTrac);
+    if (!wasMone)
+        warningNotHaveBlock(formatMone);
+    if (!wasShip)
+        warningNotHaveBlock(formatShip);
+    if (!wasIcee)
+        warningNotHaveBlock(formatIcee);
+
     in.sourceFile.close();
 }
 
@@ -138,7 +145,7 @@ void SourceFileReader::readTrac()
 
         in.readLine();
 
-        if (in.lineIsBlockEnd()) {
+        if (in.lineIsBlockEnd() || checkForOtherBlockStart()) {
             break;
         }
 
@@ -148,7 +155,7 @@ void SourceFileReader::readTrac()
         }
 
         if (in.argSize() != 5) {
-            warningArgCount();
+            warningArgCount(5);
             continue;
         }
 
@@ -181,7 +188,7 @@ void SourceFileReader::readShip()
 
         in.readLine();
 
-        if (in.lineIsBlockEnd()) {
+        if (in.lineIsBlockEnd() || checkForOtherBlockStart()) {
             break;
         }
 
@@ -191,7 +198,7 @@ void SourceFileReader::readShip()
         }
 
         if (in.argSize() != 3 && in.argSize() != 4) {
-            warningArgCount();
+            warningArgCount({3, 4});
             continue;
         }
 
@@ -202,10 +209,7 @@ void SourceFileReader::readShip()
         else if (in.argRefAt(0) == 'H')
             ship.type = Ship::Type::handler;
         else {
-            qInfo().noquote() << QString("Строка %1. Ошибка при чтении в %2: корабль имеет некорректный тип '%3'. "
-                                         "Данная строка не будет учитана. Исходный текст строки: '%4'")
-                                 .arg(in.strLineNumber()).arg(in.currentFormatString).arg(in.argRefAt(0))
-                                 .arg(in.currentLine);
+            warningBadShipType(in.argAt(0));
             continue;
         }
         ship.name = in.argAt(1);
@@ -215,7 +219,7 @@ void SourceFileReader::readShip()
         const bool hViaArgC{ in.argSize() == 4 };
         if ((hViaType || hViaArgC) != (hViaType && hViaArgC)) {
             qInfo().noquote() << QString("Строка %1. Ошибка при чтении в %2: корабль имеет несоотвествие данных: "
-                                         "%3 с %4 входными аргументами. Данная строка не будет учитана. "
+                                         "%3 с %4 входными аргументами. Данная строка не будет учтена. "
                                          "Исходный текст строки: '%5'")
                                  .arg(in.strLineNumber()).arg(in.currentFormatString).arg(hViaType ? "укладчик" : "шутер")
                                  .arg(in.argSize());
@@ -239,7 +243,7 @@ void SourceFileReader::readMone()
 
         in.readLine();
 
-        if (in.lineIsBlockEnd()) {
+        if (in.lineIsBlockEnd() || checkForOtherBlockStart()) {
             return;
         }
 
@@ -249,14 +253,14 @@ void SourceFileReader::readMone()
         }
 
         if (in.argSize() != 1) {
-            warningArgCount();
+            warningArgCount(1);
             continue;
         }
 
         double money;
         if (!convertWithWarnings(money, 0))
             return;
-        data->sensorMone.money = money;
+        data->sensorMone.setMoney(money);
         break;
     }
 
@@ -268,7 +272,7 @@ void SourceFileReader::readMone()
 
         in.readLine();
 
-        if (in.lineIsBlockEnd()) {
+        if (in.lineIsBlockEnd() || checkForOtherBlockStart()) {
             break;
         }
 
@@ -277,15 +281,25 @@ void SourceFileReader::readMone()
             continue;
         }
 
-        if (in.argSize() != 2) {
-            warningArgCount();
+        if (in.argSize() != 3) {
+            warningArgCount(3);
             continue;
         }
 
         ShipMone shipMone;
-        shipMone.name = in.argAt(0);
 
-        if (!convertWithWarnings(shipMone.money, 1))
+        if (in.argRefAt(0) == 'S')
+            shipMone.type = Ship::Type::shooter;
+        else if (in.argRefAt(0) == 'H')
+            shipMone.type = Ship::Type::handler;
+        else {
+            warningBadShipType(in.argAt(0));
+            continue;
+        }
+
+        shipMone.name = in.argAt(1);
+
+        if (!convertWithWarnings(shipMone.money, 2))
             continue;
 
         data->shipMone.append(shipMone);
@@ -302,7 +316,7 @@ void SourceFileReader::readIcee()
 
         in.readLine();
 
-        if (in.lineIsBlockEnd()) {
+        if (in.lineIsBlockEnd() || checkForOtherBlockStart()) {
             break;
         }
 
@@ -312,7 +326,7 @@ void SourceFileReader::readIcee()
         }
 
         if (in.argSize() != 3) {
-            warningArgCount();
+            warningArgCount(3);
             continue;
         }
 
@@ -341,7 +355,7 @@ void SourceFileReader::readPath()
 
         in.readLine();
 
-        if (in.lineIsBlockEnd()) {
+        if (in.lineIsBlockEnd() || checkForOtherBlockStart()) {
             break;
         }
 
@@ -351,7 +365,7 @@ void SourceFileReader::readPath()
         }
 
         if (in.argSize() != 3) {
-            warningArgCount();
+            warningArgCount(3);
             continue;
         }
 
@@ -361,10 +375,7 @@ void SourceFileReader::readPath()
         else if (in.argRefAt(0) == 'H')
             shipPath.type = Ship::Type::handler;
         else {
-            qInfo().noquote() << QString("Строка %1. Ошибка при чтении в %2: корабль имеет некорректный тип '%3'. "
-                                         "Данный путь не будет учитан. Исходный текст строки: '%4'")
-                                 .arg(in.strLineNumber()).arg(in.currentFormatString).arg(in.argRefAt(0))
-                                 .arg(in.currentLine);
+            warningBadShipType(in.argAt(0));
             continue;
         }
         shipPath.name = in.argAt(1);
@@ -393,6 +404,13 @@ void SourceFileReader::readPath()
                 in.reverseReadLine();
                 break;
             }
+            if (checkForOtherBlockStart()) {
+                qInfo().noquote() << QString("Строка ~%1. Ошибка при чтении точки в %2: Встречено начало нового блока, хотя ожидалось "
+                                             "получить ещё %3 строк для корабля %4")
+                                     .arg(in.strLineNumber()).arg(in.currentFormatString).arg(shipPath.size - i)
+                                     .arg(shipPath.name);
+                break;
+            }
 
             if (in.lineIsEmpty()) {
                 // мы не должны учитывать пустые строки
@@ -402,7 +420,7 @@ void SourceFileReader::readPath()
             }
 
             if (in.argSize() != 4) {
-                warningArgCount();
+                warningArgCount(4);
                 continue;
             }
 
@@ -426,22 +444,72 @@ void SourceFileReader::readPath()
     }
 }
 
-void SourceFileReader::warningArgCount()
+void SourceFileReader::readFictive()
 {
+    while (true) {
+        if (in.fileAtEnd())
+            break;
+
+        in.readLine();
+
+        if (in.lineIsBlockEnd())
+            break;
+    }
+}
+
+bool SourceFileReader::checkForOtherBlockStart()
+{
+    if (in.testFormat(formatTrac)) {
+        warningOtherBlockStart(formatTrac);
+    }
+    else if (in.testFormat(formatShip)) {
+        warningOtherBlockStart(formatShip);
+    }
+    else if (in.testFormat(formatMone)) {
+        warningOtherBlockStart(formatMone);
+    }
+    else if (in.testFormat(formatIcee)) {
+        warningOtherBlockStart(formatIcee);
+    }
+    else if (in.testFormat(formatPath)) {
+        warningOtherBlockStart(formatPath);
+    }
+    else {
+        return false;
+    }
+
+    in.reverseReadLine();
+    return true;
+}
+
+void SourceFileReader::warningArgCount(const QVector<int> &expected)
+{
+    QStringList expArgs;
+    for (int i = 0; i < expected.size(); ++i) {
+        expArgs << QString::number(expected.at(i));
+    }
+    const QString expString{ expArgs.join("или ") };
     qInfo().noquote() << QString("Строка %1. Ошибка при чтении в %2: строка имеет некорректное ожидаемому число "
-                                 "аргументов (получено %3). Данная строка не будет учитана. Исходный "
-                                 "текст строки: '%4'")
-                         .arg(in.strLineNumber()).arg(in.currentFormatString).arg(in.argSize()).arg(in.currentLine);
+                                 "аргументов (получено %3, ожидалось %4). Данная строка не будет учтена. Исходный "
+                                 "текст строки: '%5'")
+                         .arg(in.strLineNumber()).arg(in.currentFormatString).arg(in.argSize()).arg(expString).arg(in.currentLine);
 }
 
 
-void SourceFileReader::warningArgConvertToDouble(int badArgNumber)
+void SourceFileReader::warningArgConvertToInt(int badArgNumber)
 {
-    qInfo().noquote() << QString("Строка %1. Ошибка при чтении в %2: строка имеет неконвертируемую в число запись. "
-                                 "Данная строка не будет учитана. Аргумент по номеру %3: '%4'. Исходный "
+    qInfo().noquote() << QString("Строка %1. Ошибка при чтении в %2: строка имеет неконвертируемую в int запись. "
+                                 "Данная строка не будет учтена. Аргумент по номеру %3: '%4'. Исходный "
                                  "текст строки: '%5'")
                          .arg(in.strLineNumber()).arg(in.currentFormatString).arg(badArgNumber)
                          .arg(in.argRefAt(badArgNumber)).arg(in.currentLine);
+}
+
+void SourceFileReader::warningBadShipType(const QString &type)
+{
+    qInfo().noquote() << QString("Строка %1. Ошибка при чтении в %2: корабль имеет некорректный тип '%3'. "
+                                 "Данная строка не будет учтена. Исходный текст строки: '%4'")
+                         .arg(in.strLineNumber()).arg(in.currentFormatString).arg(type).arg(in.currentLine);
 }
 
 void SourceFileReader::warningUnexpectedEndOfFile()
@@ -457,60 +525,22 @@ void SourceFileReader::warningEmptyString()
     //                      .arg(in.strLineNumber());
 }
 
-void SourceFileReader::print() const
+void SourceFileReader::warningExtraBlock(const char *blockName)
 {
-    qDebug() << "-- current data";
-    if (!data) {
-        qDebug() << "Source data is empty. File not read.";
-        return;
-    }
+    qInfo().noquote()  << QString("Строка %1. Встречено второе объявление блока %2. Данные будут полностью проигнорированы")
+                          .arg(in.strLineNumber()).arg(blockName);
+}
 
-    qDebug() << formatTrac;
-    for (int i = 0; i < data->trac.size(); ++i) {
-        const auto & n{ data->trac.at(i) };
-        qDebug() << n.x0 << n.y0 << n.x1 << n.y1 << n.layoutStep;
-    }
-    qDebug() << formatSeparator;
+void SourceFileReader::warningNotHaveBlock(const char *blockName)
+{
+    qInfo().noquote()  << QString("Предупреждение. В файле отсутствует блок данных %1")
+                          .arg(blockName);
+}
 
-    qDebug() << formatShip;
-    for (int i = 0; i < data->ship.size(); ++i) {
-        const auto & n{ data->ship.at(i) };
-        if (n.type == Ship::Type::shooter)
-            qDebug().noquote() << n.typeToQChar() << n.name << n.speed;
-        else
-            qDebug().noquote() << n.typeToQChar() << n.name << n.speed << n.maxSensorCount;
-    }
-    qDebug() << formatSeparator;
-
-    qDebug() << formatMone;
-    qDebug() << data->sensorMone.money;
-    for (int i = 0; i < data->shipMone.size(); ++i) {
-        const auto & n{ data->shipMone.at(i) };
-        qDebug().noquote() << n.name << n.money;
-    }
-    qDebug() << formatSeparator;
-
-    qDebug() << formatIcee;
-    for (int i = 0; i < data->icee.size(); ++i) {
-        const auto & n{ data->icee.at(i) };
-        qDebug() << n.trackNumber << n.close << n.open;
-    }
-    qDebug() << formatSeparator;
-
-    qDebug() << formatPath;
-    for (int i = 0; i < data->path.size(); ++i) {
-        const auto & n{ data->path.at(i) };
-        {
-            auto d { qDebug().noquote() };
-            d << Ship::typeToQChar(n.type) << n.name << n.size;
-            if (n.size != n.path.size())
-                d << "but real size is" << n.path.size();
-        }
-
-        for (int k = 0; k < n.path.size(); ++k) {
-            const auto & nn{ n.path.at(k) };
-            qDebug() << nn.x << nn.y << nn.timeH << nn.activity;
-        }
-    }
-    qDebug() << formatSeparator;
+void SourceFileReader::warningOtherBlockStart(const char *otherBlockName)
+{
+    qInfo().noquote()  << QString("Строка %1. При чтении блока %2 встречено начало следующего блока %3 - "
+                                  "вероятно пропущен символ разделения блоков. Следующие строки будут "
+                                  "учитываться как данные блока %3")
+                          .arg(in.strLineNumber()).arg(in.currentFormatString).arg(otherBlockName);
 }

@@ -1,11 +1,11 @@
-#ifndef SOURCEFILEREADER_H
+﻿#ifndef SOURCEFILEREADER_H
 #define SOURCEFILEREADER_H
 
 #include <QFile>
 #include <QString>
 #include <QRegularExpression>
 
-namespace sourceData {
+namespace raw {
 struct Data;
 }
 
@@ -17,7 +17,9 @@ public:
     void readSourceFile(QString filename);
     void clear();
 
-    void print() const;
+    bool empty() const { return !data; }
+    raw::Data dat() const;
+    const raw::Data &constDat() const;
 
 private:
     // далее функции считывают данные до разделителя '\'
@@ -27,26 +29,34 @@ private:
     void readMone();
     void readIcee();
     void readPath();
+    void readFictive();
+    bool checkForOtherBlockStart();
 
-    void warningArgCount();
-    void warningArgConvertToDouble(int badArgNumber);
+    void warningArgCount(int expected) { return warningArgCount(QVector<int>() << expected); }
+    void warningArgCount(const QVector<int> &expected);
+    void warningArgConvertToInt(int badArgNumber);
+    void warningBadShipType(const QString &type);
     void warningUnexpectedEndOfFile();
     void warningEmptyString();
+    void warningExtraBlock(const char *blockName);
+    void warningNotHaveBlock(const char *blockName);
+    void warningOtherBlockStart(const char *otherBlockName);
+
     // конвертирует число и указывает на ошибки
     template<typename T>
     bool convertWithWarnings(T &result, int argN)
     {
         bool ok;
-        result = in.argRefAt(argN).toDouble(&ok);
+        result = in.argRefAt(argN).toInt(&ok);
         if (!ok) {
-            warningArgConvertToDouble(argN);
+            warningArgConvertToInt(argN);
         }
 
         return ok;
     }
 
 private:
-    sourceData::Data *data{ nullptr };
+    raw::Data *data{ nullptr };
 
     // чтобы не пробрасывать эти поля во многие функции, они устанавливаются здесь
     struct {
@@ -80,8 +90,12 @@ private:
             --currentLineNumber;
         }
 
+        bool testFormat(const char *format) {
+            return currentLine == format;
+        }
+
         bool testAndSetFormat(const char *format) {
-            if (currentLine == format) {
+            if (testFormat(format)) {
                 currentFormatString = format;
                 return true;
             }
@@ -89,7 +103,7 @@ private:
         }
 
         inline bool fileAtEnd() const {return sourceFile.atEnd(); }
-        inline bool lineIsBlockEnd() const { return currentLine == formatSeparator; }
+        inline bool lineIsBlockEnd() const { return currentLine == '/'; }
         inline bool lineIsEmpty() const { return currentLine.isEmpty(); }
         inline int argSize() const { return currentArgs.size(); }
         inline QString argAt(int i) const { return currentArgs.at(i).toString(); }
@@ -100,13 +114,6 @@ private:
             return QString().fill(' ', 3 - s.size()) + s;
         }
     } in;
-
-    static constexpr const char* formatTrac{ "TRAC" };
-    static constexpr const char* formatShip{ "SHIP" };
-    static constexpr const char* formatMone{ "MONE" };
-    static constexpr const char* formatIcee{ "ICEE" };
-    static constexpr const char* formatPath{ "PATH" };
-    static constexpr const char formatSeparator{ '/' };
 };
 
 #endif // SOURCEFILEREADER_H

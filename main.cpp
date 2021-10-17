@@ -3,11 +3,14 @@
 #include <QApplication>
 
 #include "sourcefilereader.h"
+#include "sourceerrordetector.h"
+#include "rawdata.h"
 
 int main(int argc, char *argv[])
 {
-    SourceFileReader reader("../in.txt");
-    reader.print();
+    SourceFileReader reader("../1/c5.txt");
+    SourceErrorDetector detector(reader.dat());
+    //reader.constDat().printToDebug();
     return 0;
 
     QApplication a(argc, argv);
