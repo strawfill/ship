@@ -30,6 +30,8 @@ private:
     void errorsWithShipNamesUnic();
     void errorsWithShipNamesUnknown();
 
+    void errorsWithTracIntersects();
+
 private:
     raw::Data *data{ nullptr };
     int errCount{ 0 };

@@ -1,0 +1,9 @@
+<RCC>
+    <qresource prefix="/">
+        <file>app.ico</file>
+        <file>pause.png</file>
+        <file>start.png</file>
+        <file>stop.png</file>
+        <file>SourceCodePro-Regular.ttf</file>
+    </qresource>
+</RCC>

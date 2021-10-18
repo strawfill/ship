@@ -37,6 +37,7 @@ void SourceErrorDetector::detectErrors()
     Q_ASSERT(data);
     errorsWithLimits();
     errorsWithShipNames();
+    errorsWithTracIntersects();
 }
 
 void SourceErrorDetector::errorsWithLimits()
@@ -239,4 +240,41 @@ void SourceErrorDetector::errorsWithShipNamesUnknown()
 {
     errorsWithShipNamesUnknownTemplate(data->ship, data->shipMone, &ShipMone::type, &ShipMone::name, formatMone, true);
     errorsWithShipNamesUnknownTemplate(data->ship, data->path, &Path::type, &Path::name, formatPath);
+}
+
+void SourceErrorDetector::errorsWithTracIntersects()
+{
+    QMap<int, QVector<QPair<int, int> > > map;
+
+    for (int i = 0; i < data->icee.size(); ++i) {
+        const auto & icee{ data->icee.at(i) };
+        auto tracs{ map.value(icee.trackNumber) };
+        tracs.append(qMakePair(icee.close, icee.open));
+        map.insert(icee.trackNumber, tracs);
+    }
+
+    const auto & keys{ map.keys() };
+    for (int i = 0; i < keys.size(); ++i) {
+        auto tracs{ map.value(keys.at(i)) };
+        std::sort(tracs.begin(), tracs.end());
+
+        for (int k = 1; k < tracs.size(); ++k) {
+            const auto & current{ tracs.at(k-1) };
+            const auto & next{ tracs.at(k) };
+
+            if (next.first <= current.second) {
+                // уже ясно, что они пересекаются
+                if (next.second <= current.second) {
+                    qInfo().noquote() << "В" << formatIcee << "для пути" << keys.at(i) << "ограничение"
+                                      << "(" << current.first << current.second << ") полностью поглощает ограничение"
+                                      << "(" << next.first << next.second << ")";
+                }
+                else {
+                    qInfo().noquote() << "В" << formatIcee << "для пути" << keys.at(i) << "ограничение"
+                                      << "(" << current.first << current.second << ") пересекается с ограничением"
+                                      << "(" << next.first << next.second << ")";
+                }
+            }
+        }
+    }
 }

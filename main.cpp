@@ -1,25 +1,23 @@
-#include "mainwindow.h"
-
 #include <QApplication>
+#include <QFontDatabase>
 
-#include "sourcefilereader.h"
-#include "sourceerrordetector.h"
-#include "rawdata.h"
+#include "mainwindow.h"
 
 int main(int argc, char *argv[])
 {
-    SourceFileReader reader("../ship/input/1/Ship3.txt");
-    SourceErrorDetector detector(reader.dat());
-    //reader.constDat().printToDebug();
-    return 0;
-
     QApplication a(argc, argv);
+
+    // Красивый шрифт приложения
+    int id = QFontDatabase::addApplicationFont(":/SourceCodePro-Regular.ttf");
+    if(id != -1){
+        QStringList font_families = QFontDatabase::applicationFontFamilies(id);
+        if (!font_families.isEmpty()) {
+            QFont newFont(font_families.first(), 10);
+            QApplication::setFont(newFont);
+        }
+    }
+
     MainWindow w;
     w.show();
     return a.exec();
 }
-
-enum class Type : bool {
-   shooter,
-   header,
-};
