@@ -1,12 +1,33 @@
 #include "sourcefilereader.h"
 
 #include "rawdata.h"
+#include "debugcatcher.h"
 
+#include <QApplication>
 #include <QDebug>
 #include <QDir>
+#include <QElapsedTimer>
 #include <QVector>
 
 using namespace raw;
+
+namespace {
+
+QElapsedTimer timer{ [](){ QElapsedTimer t; t.start(); return t; }() };
+
+void resetProcessEventsTimer()
+{
+    timer.restart();
+}
+
+void maybeProcessEvents()
+{
+    if (timer.elapsed() > 20) {
+        timer.restart();
+        QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+    }
+}
+}
 
 SourceFileReader::SourceFileReader(const QString &filename)
 {
@@ -43,17 +64,20 @@ SourceFileReader::~SourceFileReader()
 
 void SourceFileReader::readSourceFile(QString filename)
 {
+    resetProcessEventsTimer();
+    DebugCatcher::instance()->clearWaringsCount();
+
     clear();
     data = new Data;
     Q_ASSERT(!in.sourceFile.isOpen());
     filename = QFileInfo(filename).absoluteFilePath();
     in.sourceFile.setFileName(filename);
     if (!QFileInfo::exists(filename)) {
-        qInfo() << "Файл не существует. Заданный путь:" << filename;
+        qWarning() << "Файл не существует. Заданный путь:" << filename;
         return;
     }
     if (!in.sourceFile.open(QIODevice::ReadOnly|QIODevice::Text)) {
-        qInfo() << "Невозможно открыть файл для чтения по пути:" << filename;
+        qWarning() << "Невозможно открыть файл для чтения по пути:" << filename;
         return;
     }
 
@@ -115,12 +139,19 @@ void SourceFileReader::readSourceFile(QString filename)
             warningEmptyString();
         }
         else if (in.lineIsBlockEnd())
-            qInfo().noquote() << QString{"Строка %1. Ожидалось ключевое слово, но был встречен лишний символ конца блока '%2'. "
-                                         "Данная строка не будет учтена"}.arg(in.strLineNumber()).arg(in.currentLine);
+            qWarning().noquote() << QString{"Строка %1. Ожидалось ключевое слово, но был встречен лишний символ конца блока '%2'. "
+                                            "Данная строка не будет учтена"}.arg(in.strLineNumber()).arg(in.currentLine);
         else {
-            qInfo().noquote() << QString{"Строка %1. Ожидалось ключевое слово, но была встречена строка '%2'. "
-                                         "Данная строка не будет учтена"}.arg(in.strLineNumber()).arg(in.currentLine);
+            qWarning().noquote() << QString{"Строка %1. Ожидалось ключевое слово, но была встречена строка '%2'. "
+                                            "Данная строка не будет учтена"}.arg(in.strLineNumber()).arg(in.currentLine);
         }
+        enum { max_error_count = 1000 };
+        if (DebugCatcher::instance()->warningsCount() > max_error_count) {
+            qWarning().noquote() << QString{"Файл содержит не менее %1 ошибок. Дальнейший разбор содержимого "
+                                            "остановлен "}.arg(max_error_count);
+            return;
+        }
+        maybeProcessEvents();
     }
 
     if (!wasTrac)
@@ -218,11 +249,11 @@ void SourceFileReader::readShip()
         const bool hViaType{ ship.type == Ship::Type::handler };
         const bool hViaArgC{ in.argSize() == 4 };
         if ((hViaType || hViaArgC) != (hViaType && hViaArgC)) {
-            qInfo().noquote() << QString("Строка %1. Ошибка при чтении в %2: корабль имеет несоотвествие данных: "
-                                         "%3 с %4 входными аргументами. Данная строка не будет учтена. "
-                                         "Исходный текст строки: '%5'")
-                                 .arg(in.strLineNumber()).arg(in.currentFormatString).arg(hViaType ? "укладчик" : "шутер")
-                                 .arg(in.argSize());
+            qWarning().noquote() << QString("Строка %1. Ошибка при чтении в %2: корабль имеет несоответствие данных: "
+                                            "%3 с %4 входными аргументами. Данная строка не будет учтена. "
+                                            "Исходный текст строки: '%5'")
+                                    .arg(in.strLineNumber()).arg(in.currentFormatString).arg(hViaType ? "укладчик" : "шутер")
+                                    .arg(in.argSize()).arg(in.currentLine);
             continue;
         }
 
@@ -387,28 +418,28 @@ void SourceFileReader::readPath()
         // чтение точек для пути корабля
         for (int i = 0; i < shipPath.size; ++i) {
             if (in.fileAtEnd()) {
-                qInfo().noquote() << QString("Строка %1. Ошибка при чтении точки в %2: Встречен конец файла, хотя ожидалось "
-                                             "получить ещё %3 строк для корабля %4")
-                                     .arg(in.strLineNumber()).arg(in.currentFormatString).arg(shipPath.size - i)
-                                     .arg(shipPath.name);
+                qWarning().noquote() << QString("Строка %1. Ошибка при чтении точки в %2: Встречен конец файла, хотя ожидалось "
+                                                "получить ещё %3 строк для корабля %4")
+                                        .arg(in.strLineNumber()).arg(in.currentFormatString).arg(shipPath.size - i)
+                                        .arg(shipPath.name);
                 in.reverseReadLine();
                 break;
             }
             in.readLine();
 
             if (in.lineIsBlockEnd()) {
-                qInfo().noquote() << QString("Строка %1. Ошибка при чтении точки в %2: Встречен конец блока, хотя ожидалось "
-                                             "получить ещё %3 строк для корабля %4")
-                                     .arg(in.strLineNumber()).arg(in.currentFormatString).arg(shipPath.size - i)
-                                     .arg(shipPath.name);
+                qWarning().noquote() << QString("Строка %1. Ошибка при чтении точки в %2: Встречен конец блока, хотя ожидалось "
+                                                "получить ещё %3 строк для корабля %4")
+                                        .arg(in.strLineNumber()).arg(in.currentFormatString).arg(shipPath.size - i)
+                                        .arg(shipPath.name);
                 in.reverseReadLine();
                 break;
             }
             if (checkForOtherBlockStart()) {
-                qInfo().noquote() << QString("Строка ~%1. Ошибка при чтении точки в %2: Встречено начало нового блока, хотя ожидалось "
-                                             "получить ещё %3 строк для корабля %4")
-                                     .arg(in.strLineNumber()).arg(in.currentFormatString).arg(shipPath.size - i)
-                                     .arg(shipPath.name);
+                qWarning().noquote() << QString("Строка ~%1. Ошибка при чтении точки в %2: Встречено начало нового блока, хотя ожидалось "
+                                                "получить ещё %3 строк для корабля %4")
+                                        .arg(in.strLineNumber()).arg(in.currentFormatString).arg(shipPath.size - i)
+                                        .arg(shipPath.name);
                 break;
             }
 
@@ -488,47 +519,47 @@ void SourceFileReader::warningArgCount(const QVector<int> &expected)
     for (int i = 0; i < expected.size(); ++i) {
         expArgs << QString::number(expected.at(i));
     }
-    const QString expString{ expArgs.join("или ") };
-    qInfo().noquote() << QString("Строка %1. Ошибка при чтении в %2: строка имеет некорректное ожидаемому число "
-                                 "аргументов (получено %3, ожидалось %4). Данная строка не будет учтена. Исходный "
-                                 "текст строки: '%5'")
-                         .arg(in.strLineNumber()).arg(in.currentFormatString).arg(in.argSize()).arg(expString).arg(in.currentLine);
+    const QString expString{ expArgs.join(" или ") };
+    qWarning().noquote() << QString("Строка %1. Ошибка при чтении в %2: строка имеет некорректное ожидаемому число "
+                                    "аргументов (получено %3, ожидалось %4). Данная строка не будет учтена. Исходный "
+                                    "текст строки: '%5'")
+                            .arg(in.strLineNumber()).arg(in.currentFormatString).arg(in.argSize()).arg(expString).arg(in.currentLine);
 }
 
 
 void SourceFileReader::warningArgConvertToInt(int badArgNumber)
 {
-    qInfo().noquote() << QString("Строка %1. Ошибка при чтении в %2: строка имеет неконвертируемую в int запись. "
-                                 "Данная строка не будет учтена. Аргумент по номеру %3: '%4'. Исходный "
-                                 "текст строки: '%5'")
-                         .arg(in.strLineNumber()).arg(in.currentFormatString).arg(badArgNumber)
-                         .arg(in.argRefAt(badArgNumber)).arg(in.currentLine);
+    qWarning().noquote() << QString("Строка %1. Ошибка при чтении в %2: строка имеет неконвертируемую в int запись. "
+                                    "Данная строка не будет учтена. Аргумент по номеру %3: '%4'. Исходный "
+                                    "текст строки: '%5'")
+                            .arg(in.strLineNumber()).arg(in.currentFormatString).arg(badArgNumber)
+                            .arg(in.argRefAt(badArgNumber)).arg(in.currentLine);
 }
 
 void SourceFileReader::warningBadShipType(const QString &type)
 {
-    qInfo().noquote() << QString("Строка %1. Ошибка при чтении в %2: корабль имеет некорректный тип '%3'. "
-                                 "Данная строка не будет учтена. Исходный текст строки: '%4'")
-                         .arg(in.strLineNumber()).arg(in.currentFormatString).arg(type).arg(in.currentLine);
+    qWarning().noquote() << QString("Строка %1. Ошибка при чтении в %2: корабль имеет некорректный тип '%3'. "
+                                    "Данная строка не будет учтена. Исходный текст строки: '%4'")
+                            .arg(in.strLineNumber()).arg(in.currentFormatString).arg(type).arg(in.currentLine);
 }
 
 void SourceFileReader::warningUnexpectedEndOfFile()
 {
-    qInfo().noquote() << QString("Строка в конце файла (примерно %1). Ошибка при чтении в %2: обнаружен конец файла, но текущий блок не был закрыт.")
-                         .arg(in.lineNumber()).arg(in.currentFormatString);
+    qWarning().noquote() << QString("Строка в конце файла (примерно %1). Ошибка при чтении в %2: обнаружен конец файла, но текущий блок не был закрыт.")
+                            .arg(in.lineNumber()).arg(in.currentFormatString);
 }
 
 void SourceFileReader::warningEmptyString()
 {
     // не будем писать что-то такое...
-    //qInfo().noquote()  << QString("Строка %1. Предупреждение. Встречена пустая строка в файле исходных данных")
+    //qWarning().noquote()  << QString("Строка %1. Предупреждение. Встречена пустая строка в файле исходных данных")
     //                      .arg(in.strLineNumber());
 }
 
 void SourceFileReader::warningExtraBlock(const char *blockName)
 {
-    qInfo().noquote()  << QString("Строка %1. Встречено второе объявление блока %2. Данные будут полностью проигнорированы")
-                          .arg(in.strLineNumber()).arg(blockName);
+    qWarning().noquote()  << QString("Строка %1. Встречено второе объявление блока %2. Данные будут полностью проигнорированы")
+                             .arg(in.strLineNumber()).arg(blockName);
 }
 
 void SourceFileReader::warningNotHaveBlock(const char *blockName)
@@ -539,8 +570,8 @@ void SourceFileReader::warningNotHaveBlock(const char *blockName)
 
 void SourceFileReader::warningOtherBlockStart(const char *otherBlockName)
 {
-    qInfo().noquote()  << QString("Строка %1. При чтении блока %2 встречено начало следующего блока %3 - "
-                                  "вероятно пропущен символ разделения блоков. Следующие строки будут "
-                                  "учитываться как данные блока %3")
-                          .arg(in.strLineNumber()).arg(in.currentFormatString).arg(otherBlockName);
+    qWarning().noquote()  << QString("Строка %1. При чтении блока %2 встречено начало следующего блока %3 - "
+                                     "вероятно пропущен символ разделения блоков. Следующие строки будут "
+                                     "учитываться как данные блока %3")
+                             .arg(in.strLineNumber()).arg(in.currentFormatString).arg(otherBlockName);
 }

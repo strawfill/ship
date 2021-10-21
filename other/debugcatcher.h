@@ -13,9 +13,10 @@ public:
     void clearWaringsCount() { infoWarnings = 0; }
 
     void catchInfoMessage(const QString &string);
+    void catchWarningMessage(const QString &string);
 
 signals:
-    void infoMessageRecieved(const QString &string);
+    void messageRecieved(const QString &string);
 
 private:
     DebugCatcher() =default;

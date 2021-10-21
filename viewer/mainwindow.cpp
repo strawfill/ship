@@ -18,7 +18,7 @@ MainWindow::MainWindow(QWidget *parent)
     // чтобы второй был минимального размера
     ui->splitter->setSizes({10000, 1});
 
-    connect(DebugCatcher::instance(), &DebugCatcher::infoMessageRecieved, ui->plainTextEdit, &QPlainTextEdit::appendPlainText);
+    connect(DebugCatcher::instance(), &DebugCatcher::messageRecieved, ui->plainTextEdit, &QPlainTextEdit::appendPlainText);
 }
 
 MainWindow::~MainWindow()

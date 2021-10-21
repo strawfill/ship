@@ -18,6 +18,8 @@ void myMessageOutput(QtMsgType type, const QMessageLogContext &context, const QS
 
     if (type == QtMsgType::QtInfoMsg)
         DebugCatcher::instance()->catchInfoMessage(msg);
+    else if (type == QtMsgType::QtWarningMsg)
+        DebugCatcher::instance()->catchWarningMessage(msg);
 }
 } // end anonymous namespace
 
@@ -30,6 +32,11 @@ DebugCatcher *DebugCatcher::instance()
 
 void DebugCatcher::catchInfoMessage(const QString &string)
 {
+    emit messageRecieved(string);
+}
+
+void DebugCatcher::catchWarningMessage(const QString &string)
+{
     ++infoWarnings;
-    emit infoMessageRecieved(string);
+    emit messageRecieved(string);
 }

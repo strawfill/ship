@@ -5,6 +5,14 @@ namespace raw {
 struct Data;
 }
 
+/**
+ * @brief Определяет и выводит в Warning() ошибки, связанные с некорректными значениями данных
+ *
+ * Данный класс проверяет:
+ *   корректность лимитов (различных ограничений)
+ *   наличие обязательных данных
+ *   непротиворечивость данных внутри блока и между блоками
+ */
 class SourceErrorDetector
 {
 public:
@@ -12,7 +20,6 @@ public:
     ~SourceErrorDetector();
 
     void setDataAndDetectErrors(const raw::Data &adata);
-    int errorCount() const { return errCount; }
 
     void clear();
 
@@ -26,6 +33,11 @@ private:
     void errorsWithLimitsIcee();
     void errorsWithLimitsPath();
 
+    void errorsNoRequiredData();
+    void errorsNoShips();
+    void errorsNoTracs();
+    void errorsNoMone();
+
     void errorsWithShipNames();
     void errorsWithShipNamesUnic();
     void errorsWithShipNamesUnknown();
@@ -34,7 +46,6 @@ private:
 
 private:
     raw::Data *data{ nullptr };
-    int errCount{ 0 };
 };
 
 #endif // SOURCEERRORDETECTOR_H
