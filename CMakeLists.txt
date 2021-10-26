@@ -11,11 +11,11 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-set (BUILD_DIR ${CMAKE_CURRENT_SOURCE_DIR}/bin)
+set(BUILD_DIR ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 
 find_package(Qt5 COMPONENTS Widgets Gui REQUIRED)
 
-include_directories("reader" "other" "viewer")
+include_directories("reader" "other" "viewer" "pathwalk")
 
 set(VIEWER
     viewer/mainwindow.h
@@ -32,6 +32,11 @@ set(READER
     reader/sourcefilereader.cpp
     )
 
+set(PATHWALK
+    pathwalk/prepareddata.h
+    pathwalk/prepareddata.cpp
+    )
+
 set(OTHER
     other/debugcatcher.h
     other/debugcatcher.cpp
@@ -40,16 +45,17 @@ set(OTHER
 set(RESOURCES
     resources/data.qrc
     resources/rcIco.rc
-)
+    )
 
 add_executable(${PROJECT_NAME} WIN32
     main.cpp
 
     ${VIEWER}
     ${READER}
+    ${PATHWALK}
     ${OTHER}
     ${RESOURCES}
-  )
+    )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE Qt5::Widgets Qt5::Gui)
 

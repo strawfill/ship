@@ -38,6 +38,7 @@ void SourceErrorDetector::detectErrors()
     errorsNoRequiredData();
     errorsWithShipNames();
     errorsWithTracIntersects();
+    errorsWithIceeIntersects();
 }
 
 void SourceErrorDetector::errorsWithLimits()
@@ -52,6 +53,10 @@ void SourceErrorDetector::errorsWithLimits()
 void SourceErrorDetector::errorsWithLimitsTrac()
 {
     const auto & tracs{ data->trac };
+    if (tracs.size() > 1000) {
+        qWarning()<< "По условию максимальное количество трасс - не более 1000, но во входном файле встречено больше ("
+                  << tracs.size() << ")";
+    }
     for (int i = 0; i < tracs.size(); ++i) {
         const auto & trac{ tracs.at(i) };
         if (trac.layoutStep <= 0) {
@@ -82,9 +87,9 @@ void SourceErrorDetector::errorsWithLimitsShip()
                           << ship.at(i).maxSensorCount << ")";
             }
             if (ship.at(i).maxSensorCount > 20000) {
-                qInfo()<< "Предупреждение. По условию на укладчик можно разместить не более 20000 сенсоров, но на"
-                       << ship.at(i).typeToQChar() << ship.at(i).name << " это число составляет ("
-                       << ship.at(i).maxSensorCount << ")";
+                qWarning()<< "По условию на укладчик можно разместить не более 20000 сенсоров, но на"
+                          << ship.at(i).typeToQChar() << ship.at(i).name << " это число составляет ("
+                          << ship.at(i).maxSensorCount << ")";
             }
         }
     }
@@ -161,6 +166,13 @@ void SourceErrorDetector::errorsWithLimitsPath()
                               << path.at(i).name << "(" << pathdots.at(k).activity << ")";
                 }
             }
+        }
+    }
+
+    if (!path.isEmpty()) {
+        if (path.size() != 2) {
+            qWarning()<< "В" << formatPath << "ожидалось наличие путей для двух кораблей" << Ship::typeToQChar(path.at(i).type)
+                      << path.at(i).name << "(" << pathdots.at(k).timeH << ")";
         }
     }
 }
@@ -289,7 +301,7 @@ void SourceErrorDetector::errorsWithShipNamesUnknown()
     errorsWithShipNamesUnknownTemplate(data->ship, data->path, &Path::type, &Path::name, formatPath);
 }
 
-void SourceErrorDetector::errorsWithTracIntersects()
+void SourceErrorDetector::errorsWithIceeIntersects()
 {
     // оказывается, что это не ошибки, поэтому не стоит что-либо делать
     return;
@@ -328,4 +340,62 @@ void SourceErrorDetector::errorsWithTracIntersects()
             }
         }
     }
+}
+
+void SourceErrorDetector::errorsWithTracIntersects()
+{
+    // проверим, что пути не включены один в другой (не пересекаются имея одинаковый наклон)
+
+    // проверим, лежат ли все 4 точки на одной прямой
+    auto isInOneLine = [](const Trac &lhs, const Trac &rhs) {
+        // сначала вырожденные случаи, которые проще считаются
+        if (lhs.x0 == lhs.x1 && rhs.x0 == rhs.x1 && lhs.x0 == rhs.x0)
+            return true;
+        if (lhs.y0 == lhs.y1 && rhs.y0 == rhs.y1 && lhs.y0 == rhs.y0)
+            return true;
+        // kl = deltaYl / deltaXl
+        // kr = deltaYr / deltaXr
+        // kl == kr : deltaYl*deltaXr == deltaYr*deltaXl
+        // одинаковый наклон для кривых (lx0 ly0; lx1 ly1) и (rx0 ry0; rx1 ry1) [точки (0, 1), (2, 3)]
+        const bool tanEqual{ (lhs.y1 - lhs.y0) * (rhs.x1 - rhs.x0) == (rhs.y1 - rhs.y0) * (lhs.x1 - lhs.x0) };
+        if (!tanEqual)
+            return false;
+        // одинаковый наклон для кривых (lx0 ly0; lx1 ly1) и (lx0 ly0; rx1 ry1) [точки (0, 1), (0, 3)]
+        return (lhs.y1 - lhs.y0) * (rhs.x1 - lhs.x0) == (rhs.y1 - lhs.y0) * (lhs.x1 - lhs.x0);
+    };
+
+    // проверим, не пересекаются ли кривые, лежащие на одной кривой
+    auto intersects = [isInOneLine](const Trac &lhs, const Trac &rhs) {
+        if (!isInOneLine(lhs, rhs))
+            return false;
+        // проверка через Манхэттенскую метрику
+        using M = QPair<int, int>;
+        M m1(lhs.x0+lhs.y0, lhs.x1+lhs.y1);
+        M m2(rhs.x0+rhs.y0, rhs.x1+rhs.y1);
+        // пусть внутри кривой метрика будет в порядке возрастания
+        if (m1.first > m1.second)
+            qSwap(m1.first, m1.second);
+        if (m2.first > m2.second)
+            qSwap(m2.first, m2.second);
+        // пусть большая метрика m1 будет меньше или равна большей метрики m2
+        if (m1.second > m2.second)
+            qSwap(m1, m2);
+        // проверим, пересекаются ли они
+        return m1.second > m2.first;
+    };
+
+    const int size{ data->trac.size() };
+    for (int i = 0; i < size; ++i) {
+        auto tracI{ data->trac.at(i) };
+        for (int k = i+1; k < size; ++k) {
+            auto tracK{ data->trac.at(k) };
+            if (intersects(tracI, tracK)) {
+                qWarning() << "В" << formatTrac << "заданы две трассы, которые частично или полностью пересекаются ("
+                           << tracI.x0 << tracI.y0 << tracI.x1 << tracI.y1 << tracI.layoutStep << ") и ("
+                           << tracK.x0 << tracK.y0 << tracK.x1 << tracK.y1 << tracK.layoutStep
+                           << ") данное обстоятельство рассматривается как ошибка входных данных";
+            }
+        }
+    }
+
 }

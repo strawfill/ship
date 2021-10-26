@@ -42,6 +42,7 @@ private:
     void errorsWithShipNamesUnic();
     void errorsWithShipNamesUnknown();
 
+    void errorsWithIceeIntersects();
     void errorsWithTracIntersects();
 
 private:

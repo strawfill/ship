@@ -6,6 +6,7 @@
 #include "sourcefilereader.h"
 #include "sourceerrordetector.h"
 #include "rawdata.h"
+#include "prepareddata.h"
 
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
