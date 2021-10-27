@@ -171,8 +171,24 @@ void SourceErrorDetector::errorsWithLimitsPath()
 
     if (!path.isEmpty()) {
         if (path.size() != 2) {
-            qWarning()<< "В" << formatPath << "ожидалось наличие путей для двух кораблей" << Ship::typeToQChar(path.at(i).type)
-                      << path.at(i).name << "(" << pathdots.at(k).timeH << ")";
+            qWarning()<< "В" << formatPath << "ожидалось наличие путей для двух кораблей, но в исходном файле их"
+                      << "(" << path.size() << ")";
+        }
+
+        bool hasH{ false }, hasS{ false };
+
+        for (int i = 0; i < path.size(); ++i) {
+            if (path.at(i).type == Ship::Type::handler)
+                hasH = true;
+            if (path.at(i).type == Ship::Type::shooter)
+                hasS = true;
+        }
+
+        if (!hasH) {
+            qWarning()<< "В" << formatPath << "не встречен маршрут укладчика";
+        }
+        if (!hasS) {
+            qWarning()<< "В" << formatPath << "не встречен маршрут шутера";
         }
     }
 }

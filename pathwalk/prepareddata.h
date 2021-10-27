@@ -86,6 +86,29 @@ private:
     qlonglong dailyCost;
 };
 
+struct DataStatic
+{
+    QVector<Trac> tracs;
+    QVector<Handler> handlers;
+    QVector<Shooter> shooters;
+
+    DataStatic() {  }
+    DataStatic(const raw::Data &data);
+};
+
+using PathDot = raw::PathDot;
+
+struct DataDynamic
+{
+    QVector<PathDot> pathShooter;
+    QVector<PathDot> pathHandler;
+    QString shooterName;
+    QString handlerName;
+    bool has{ false };
+
+    DataDynamic() {  }
+    DataDynamic(const raw::Data &data);
+};
 
 }
 

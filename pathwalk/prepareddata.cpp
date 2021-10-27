@@ -124,5 +124,33 @@ Shooter::Shooter(const raw::Ship &ship, const raw::ShipMone &shipMone)
     Q_ASSERT(ship.name == shipMone.name);
 }
 
+DataStatic::DataStatic(const raw::Data &data)
+{
+
+}
+
+DataDynamic::DataDynamic(const raw::Data &data)
+{
+    const auto &p{ data.path };
+    Q_ASSERT(p.size() == 2);
+
+    if (p.at(0).type == raw::Ship::Type::handler) {
+        Q_ASSERT(p.at(1).type == raw::Ship::Type::shooter);
+        pathHandler = p.at(0).path;
+        handlerName = p.at(0).name;
+
+        pathShooter = p.at(1).path;
+        shooterName = p.at(1).name;
+    }
+    else {
+        Q_ASSERT(p.at(1).type == raw::Ship::Type::handler);
+        pathHandler = p.at(1).path;
+        handlerName = p.at(1).name;
+
+        pathShooter = p.at(0).path;
+        shooterName = p.at(0).name;
+    }
+}
+
 
 } // end prepared namespace
