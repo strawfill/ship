@@ -4,6 +4,21 @@
 
 namespace prepared {
 
+bool Line::operator<(const Line &other) const
+{
+    // просто какая-то корректная реализация
+    auto asV = [](const Line &l) {
+        QVector<int> coords;
+        coords.reserve(4);
+        coords << l.p1().x();
+        coords << l.p1().y();
+        coords << l.p2().x();
+        coords << l.p2().y();
+        return coords;
+    };
+
+    return asV(*this) < asV(other);
+}
 
 IceeArray::IceeArray(const QVector<raw::Icee> &source)
 {
@@ -95,12 +110,11 @@ int IceeArray::findOpenIndexFrom(int hour) const
 }
 
 Trac::Trac(const raw::Trac &trac, const QVector<raw::Icee> &icees)
-    : point1(trac.x0, trac.y0)
-    , point2(trac.x1, trac.y1)
+    : ln(trac.x0, trac.y0, trac.x1, trac.y1)
     , limits(icees)
+    , validData(true)
 {
-    auto delta{ point2 - point1 };
-    distance = qSqrt(delta.x()*delta.x() + delta.y()*delta.y());
+    distance = qSqrt(ln.dx()*ln.dx() + ln.dy()*ln.dy());
     sensorCount = qIsNull(distance) ? 1 : qCeil(distance / trac.layoutStep);
 }
 
@@ -109,6 +123,7 @@ Handler::Handler(const raw::Ship &ship, const raw::SensorMone &sensorMone, const
     , spd(ship.speed)
     , sensorCount(ship.maxSensorCount)
     , dailyCost(qlonglong(ship.maxSensorCount) * sensorMone.money() + shipMone.money)
+    , validData(true)
 {
     Q_ASSERT(ship.type == raw::Ship::Type::handler);
     Q_ASSERT(ship.name == shipMone.name);
@@ -119,37 +134,133 @@ Shooter::Shooter(const raw::Ship &ship, const raw::ShipMone &shipMone)
     : nm(ship.name)
     , spd(ship.speed)
     , dailyCost(shipMone.money)
+    , validData(true)
 {
-    Q_ASSERT(ship.type == raw::Ship::Type::handler);
+    Q_ASSERT(ship.type == raw::Ship::Type::shooter);
     Q_ASSERT(ship.name == shipMone.name);
 }
 
 DataStatic::DataStatic(const raw::Data &data)
 {
+    tracs.reserve(data.trac.size());
+    const auto & iceeInNums{ iceeToNumbers(data) };
+    for (int i = 0; i < data.trac.size(); ++i) {
+        const auto & obj{ Trac(data.trac.at(i), iceeInNums.at(i)) };
+        tracs.append(obj);
+        line2trac.insert(obj.line(), obj);
+    }
 
+    handlers.reserve(2 * data.ship.size() / 3);
+    shooters.reserve(2 * data.ship.size() / 3);
+    const auto & moneMap{ fullnameToMone(data) };
+    for (int i = 0; i < data.ship.size(); ++i) {
+        const auto & ship{ data.ship.at(i) };
+        const auto & mone{ moneMap.value(fullShipName(ship)) };
+
+        if (ship.type == raw::Ship::Type::handler) {
+            const auto & obj{ Handler(ship, data.sensorMone, mone) };
+            handlers.append(obj);
+            name2handler.insert(obj.name(), obj);
+        }
+        else {
+            const auto & obj{ Shooter(ship, mone) };
+            shooters.append(obj);
+            name2shooter.insert(obj.name(), obj);
+        }
+    }
+
+    // не все ошибки было удобно детектировать при raw структурах, поэтому здесь есть ещё детектор...
+    // (да, это костыль, такую детекцию нужно по-хорошему вынести в другое место)
+    detectErrors();
+}
+
+void DataStatic::detectErrors()
+{
+    // поиск ошибок вида:
+    //  какая-то трасса настолько большая, что среди обработчиков нет такого, который смог бы обойти её
+    int maxTrac{ 0 };
+    for (const auto & trac : tracs) {
+        if (trac.sensors() > maxTrac)
+            maxTrac = trac.sensors();
+    }
+    int maxHandler{ 0 };
+    for (const auto & handler : handlers) {
+        if (handler.sensors() > maxHandler)
+            maxHandler = handler.sensors();
+    }
+
+    if (maxTrac > maxHandler) {
+        qWarning() << "В" << formatTrac << "присутствует трасса, для обработки которой нужно ("
+                   << maxTrac << ") датчиков, но обработчик с максимальным количеством сенсоров имеет их лишь ("
+                   << maxHandler << ")";
+    }
+}
+
+Trac DataStatic::tracViaLine(const Line &line) const
+{
+    auto test{ line2trac.value(line) };
+    if (test.valid())
+        return test;
+    // если мы в другом порядке задали две точки линии, то это всё та же линия
+    return line2trac.value(Line{ line.p2(), line.p1() });
+}
+
+
+QVector<QVector<raw::Icee> > DataStatic::iceeToNumbers(const raw::Data &data)
+{
+    QVector<QVector<raw::Icee> > result;
+    result.resize(data.trac.size());
+
+    for (int i = 0; i < data.icee.size(); ++i) {
+        const auto &ic{ data.icee.at(i) };
+        const int index{ ic.trackNumber - 1 };
+        Q_ASSERT(index >= 0 && index < data.trac.size());
+        result[index].append(ic);
+    }
+    return result;
+}
+
+QMap<QString, raw::ShipMone> DataStatic::fullnameToMone(const raw::Data &data)
+{
+    QMap<QString, raw::ShipMone> result;
+    for (int i = 0; i < data.shipMone.size(); ++i) {
+        result.insert(fullShipName(data.shipMone.at(i)), data.shipMone.at(i));
+    }
+    return result;
 }
 
 DataDynamic::DataDynamic(const raw::Data &data)
 {
+    if (data.path.size() != 2)
+        return;
+
+    has = true;
+
     const auto &p{ data.path };
-    Q_ASSERT(p.size() == 2);
 
-    if (p.at(0).type == raw::Ship::Type::handler) {
-        Q_ASSERT(p.at(1).type == raw::Ship::Type::shooter);
-        pathHandler = p.at(0).path;
-        handlerName = p.at(0).name;
+    const int h{ (p.at(0).type == raw::Ship::Type::handler ? 0 : 1) };
+    const int s{ (p.at(0).type == raw::Ship::Type::shooter ? 0 : 1) };
 
-        pathShooter = p.at(1).path;
-        shooterName = p.at(1).name;
-    }
-    else {
-        Q_ASSERT(p.at(1).type == raw::Ship::Type::handler);
-        pathHandler = p.at(1).path;
-        handlerName = p.at(1).name;
+    Q_ASSERT(p.at(h).type == raw::Ship::Type::handler);
+    Q_ASSERT(p.at(s).type == raw::Ship::Type::shooter);
 
-        pathShooter = p.at(0).path;
-        shooterName = p.at(0).name;
-    }
+    pathHandler = p.at(h).path;
+    handlerName = p.at(h).name;
+
+    pathShooter = p.at(s).path;
+    shooterName = p.at(s).name;
+}
+
+qlonglong totalCost(const DataStatic &ds, const DataDynamic &dd)
+{
+    if (!dd.has)
+        return 0LL;
+
+    int maxhour{ qMax(dd.pathHandler.last().timeH, dd.pathShooter.last().timeH) };
+    int days{ qCeil(maxhour / 24.) };
+
+    return ds.handlerViaName(dd.handlerName).cost(days) +
+            ds.shooterViaName(dd.shooterName).cost(days);
 }
 
 

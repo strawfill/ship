@@ -24,26 +24,26 @@ public:
     void clear();
 
 private:
-    void detectErrors();
+    void detectErrors() const;
 
-    void errorsWithLimits();
-    void errorsWithLimitsTrac();
-    void errorsWithLimitsShip();
-    void errorsWithLimitsMone();
-    void errorsWithLimitsIcee();
-    void errorsWithLimitsPath();
+    void errorsWithLimits() const;
+    void errorsWithLimitsTrac() const;
+    void errorsWithLimitsShip() const;
+    void errorsWithLimitsMone() const;
+    void errorsWithLimitsIcee() const;
+    void errorsWithLimitsPath() const;
 
-    void errorsNoRequiredData();
-    void errorsNoShips();
-    void errorsNoTracs();
-    void errorsNoMone();
+    void errorsNoRequiredData() const;
+    void errorsNoShips() const;
+    void errorsNoTracs() const;
+    void errorsNoMone() const;
 
-    void errorsWithShipNames();
-    void errorsWithShipNamesUnic();
-    void errorsWithShipNamesUnknown();
+    void errorsWithShipNames() const;
+    void errorsWithShipNamesUnic() const;
+    void errorsWithShipNamesUnknown() const;
 
-    void errorsWithIceeIntersects();
-    void errorsWithTracIntersects();
+    void errorsWithIceeIntersects() const;
+    void errorsWithTracIntersects() const;
 
 private:
     raw::Data *data{ nullptr };

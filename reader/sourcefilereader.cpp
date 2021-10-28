@@ -12,7 +12,6 @@
 using namespace raw;
 
 namespace {
-
 QElapsedTimer timer{ [](){ QElapsedTimer t; t.start(); return t; }() };
 
 void resetProcessEventsTimer()
@@ -27,7 +26,7 @@ void maybeProcessEvents()
         QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
     }
 }
-}
+} // end anomymous namespace
 
 SourceFileReader::SourceFileReader(const QString &filename)
 {
@@ -422,8 +421,7 @@ void SourceFileReader::readPath()
                                                 "получить ещё %3 строк для корабля %4")
                                         .arg(in.strLineNumber()).arg(in.currentFormatString).arg(shipPath.size - i)
                                         .arg(shipPath.name);
-                in.reverseReadLine();
-                break;
+                return;
             }
             in.readLine();
 
@@ -529,11 +527,11 @@ void SourceFileReader::warningArgCount(const QVector<int> &expected)
 
 void SourceFileReader::warningArgConvertToInt(int badArgNumber)
 {
-    qWarning().noquote() << QString("Строка %1. Ошибка при чтении в %2: строка имеет неконвертируемую в int запись. "
+    qWarning().noquote() << QString("Строка %1. Ошибка при чтении в %2: строка имеет неконвертируемую в int%6 запись. "
                                     "Данная строка не будет учтена. Аргумент по номеру %3: '%4'. Исходный "
                                     "текст строки: '%5'")
                             .arg(in.strLineNumber()).arg(in.currentFormatString).arg(badArgNumber)
-                            .arg(in.argRefAt(badArgNumber)).arg(in.currentLine);
+                            .arg(in.argRefAt(badArgNumber)).arg(in.currentLine).arg(sizeof (int) * 8);
 }
 
 void SourceFileReader::warningBadShipType(const QString &type)

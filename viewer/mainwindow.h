@@ -23,7 +23,7 @@ protected:
     void dropEvent(QDropEvent *event) override;
 
 private:
-    bool hasGoodFile(const QMimeData *data);
+    bool hasGoodFormat(const QMimeData *data);
     void processFile(const QString &filename);
 
 private:

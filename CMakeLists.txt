@@ -35,6 +35,8 @@ set(READER
 set(PATHWALK
     pathwalk/prepareddata.h
     pathwalk/prepareddata.cpp
+    pathwalk/patherrordetector.h
+    pathwalk/patherrordetector.cpp
     )
 
 set(OTHER

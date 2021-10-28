@@ -21,7 +21,6 @@ void SourceErrorDetector::setDataAndDetectErrors(const raw::Data &adata)
 {
     clear();
     data = new Data(adata);
-
     detectErrors();
 }
 
@@ -31,7 +30,7 @@ void SourceErrorDetector::clear()
     data = nullptr;
 }
 
-void SourceErrorDetector::detectErrors()
+void SourceErrorDetector::detectErrors() const
 {
     Q_ASSERT(data);
     errorsWithLimits();
@@ -41,7 +40,7 @@ void SourceErrorDetector::detectErrors()
     errorsWithIceeIntersects();
 }
 
-void SourceErrorDetector::errorsWithLimits()
+void SourceErrorDetector::errorsWithLimits() const
 {
     errorsWithLimitsTrac();
     errorsWithLimitsShip();
@@ -50,7 +49,7 @@ void SourceErrorDetector::errorsWithLimits()
     errorsWithLimitsPath();
 }
 
-void SourceErrorDetector::errorsWithLimitsTrac()
+void SourceErrorDetector::errorsWithLimitsTrac() const
 {
     const auto & tracs{ data->trac };
     if (tracs.size() > 1000) {
@@ -71,7 +70,7 @@ void SourceErrorDetector::errorsWithLimitsTrac()
     }
 }
 
-void SourceErrorDetector::errorsWithLimitsShip()
+void SourceErrorDetector::errorsWithLimitsShip() const
 {
     const auto & ship{ data->ship };
     for (int i = 0; i < ship.size(); ++i) {
@@ -95,7 +94,7 @@ void SourceErrorDetector::errorsWithLimitsShip()
     }
 }
 
-void SourceErrorDetector::errorsWithLimitsMone()
+void SourceErrorDetector::errorsWithLimitsMone() const
 {
     if (data->sensorMone.valid() && data->sensorMone.money() <= 0) {
         qWarning()<< "Задана некорректная (неположительная) стоимость аренды датчиков в" << formatMone << "("
@@ -111,7 +110,7 @@ void SourceErrorDetector::errorsWithLimitsMone()
     }
 }
 
-void SourceErrorDetector::errorsWithLimitsIcee()
+void SourceErrorDetector::errorsWithLimitsIcee() const
 {
     const auto & icee{ data->icee };
     for (int i = 0; i < icee.size(); ++i) {
@@ -132,7 +131,7 @@ void SourceErrorDetector::errorsWithLimitsIcee()
     }
 }
 
-void SourceErrorDetector::errorsWithLimitsPath()
+void SourceErrorDetector::errorsWithLimitsPath() const
 {
     QSet<int> opsH{ 0, 1, 2, 3 };
     QSet<int> opsS{ 0, 1, 4 };
@@ -193,21 +192,21 @@ void SourceErrorDetector::errorsWithLimitsPath()
     }
 }
 
-void SourceErrorDetector::errorsNoRequiredData()
+void SourceErrorDetector::errorsNoRequiredData() const
 {
     errorsNoTracs();
     errorsNoShips();
     errorsNoMone();
 }
 
-void SourceErrorDetector::errorsNoTracs()
+void SourceErrorDetector::errorsNoTracs() const
 {
     if (data->trac.isEmpty()) {
         qWarning().noquote() << "В" << formatTrac << "отсутствуют трассы. Нечего делать";
     }
 }
 
-void SourceErrorDetector::errorsNoShips()
+void SourceErrorDetector::errorsNoShips() const
 {
     bool hasH{ false }, hasS{ false };
     const auto shipVector{ data->ship };
@@ -228,14 +227,14 @@ void SourceErrorDetector::errorsNoShips()
     qWarning().noquote() << "В" << formatShip << "отсутствуют корабли типа:" << noShips.join(" и ");
 }
 
-void SourceErrorDetector::errorsNoMone()
+void SourceErrorDetector::errorsNoMone() const
 {
     if (!data->sensorMone.valid()) {
         qWarning().noquote() << "В" << formatMone << "нет информации о стоимости датчиков";
     }
 }
 
-void SourceErrorDetector::errorsWithShipNames()
+void SourceErrorDetector::errorsWithShipNames() const
 {
     errorsWithShipNamesUnic();
     errorsWithShipNamesUnknown();
@@ -267,7 +266,7 @@ void errorsWithShipNamesUnicTemplate(const QVector<T> &t, Ship::Type T::* type, 
 
 } // end anonymous namespace
 
-void SourceErrorDetector::errorsWithShipNamesUnic()
+void SourceErrorDetector::errorsWithShipNamesUnic() const
 {
     errorsWithShipNamesUnicTemplate(data->ship, &Ship::type, &Ship::name, formatShip);
     errorsWithShipNamesUnicTemplate(data->shipMone, &ShipMone::type, &ShipMone::name, formatMone);
@@ -311,13 +310,13 @@ void errorsWithShipNamesUnknownTemplate(const QVector<raw::Ship> &ships, const Q
 
 } // end anonymous namespace
 
-void SourceErrorDetector::errorsWithShipNamesUnknown()
+void SourceErrorDetector::errorsWithShipNamesUnknown() const
 {
     errorsWithShipNamesUnknownTemplate(data->ship, data->shipMone, &ShipMone::type, &ShipMone::name, formatMone, true);
     errorsWithShipNamesUnknownTemplate(data->ship, data->path, &Path::type, &Path::name, formatPath);
 }
 
-void SourceErrorDetector::errorsWithIceeIntersects()
+void SourceErrorDetector::errorsWithIceeIntersects() const
 {
     // оказывается, что это не ошибки, поэтому не стоит что-либо делать
     return;
@@ -358,7 +357,7 @@ void SourceErrorDetector::errorsWithIceeIntersects()
     }
 }
 
-void SourceErrorDetector::errorsWithTracIntersects()
+void SourceErrorDetector::errorsWithTracIntersects() const
 {
     // проверим, что пути не включены один в другой (не пересекаются имея одинаковый наклон)
 

@@ -10,12 +10,12 @@
 // нужны для первичной обработки информации, когда создавать готовые структуры данных ещё рано
 namespace raw {
 
-static constexpr const char* formatTrac{ "TRAC" };
-static constexpr const char* formatShip{ "SHIP" };
-static constexpr const char* formatMone{ "MONE" };
-static constexpr const char* formatIcee{ "ICEE" };
-static constexpr const char* formatPath{ "PATH" };
-static constexpr const char formatSeparator{ '/' };
+constexpr const char* formatTrac{ "TRAC" };
+constexpr const char* formatShip{ "SHIP" };
+constexpr const char* formatMone{ "MONE" };
+constexpr const char* formatIcee{ "ICEE" };
+constexpr const char* formatPath{ "PATH" };
+constexpr const char formatSeparator{ '/' };
 
 struct Trac
 {
