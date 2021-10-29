@@ -8,6 +8,8 @@ namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
 
 class QMimeData;
+class SimulationScene;
+class QAction;
 
 class MainWindow : public QMainWindow
 {
@@ -15,7 +17,7 @@ class MainWindow : public QMainWindow
 
 public:
     MainWindow(QWidget *parent = nullptr);
-    ~MainWindow();
+    ~MainWindow() override;
 
     // QWidget interface
 protected:
@@ -24,10 +26,13 @@ protected:
 
 private:
     bool hasGoodFormat(const QMimeData *data);
+    void processMimeData(const QMimeData *data);
     void processFile(const QString &filename);
+    void postFromClipboardRequested();
 
 private:
     Ui::MainWindow *ui;
-
+    SimulationScene *scene{ nullptr };
+    QAction *pastAction{ nullptr };
 };
 #endif // MAINWINDOW_H

@@ -17,7 +17,7 @@
    <string>StrawberryShip</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="resources/data.qrc">
+   <iconset resource="../resources/data.qrc">
     <normaloff>:/app.ico</normaloff>:/app.ico</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
@@ -95,7 +95,20 @@
            <item row="0" column="0">
             <layout class="QVBoxLayout" name="verticalLayout">
              <item>
-              <widget class="QGraphicsView" name="graphicsView"/>
+              <widget class="IgnoreDndGraphicsView" name="graphicsView">
+               <property name="verticalScrollBarPolicy">
+                <enum>Qt::ScrollBarAlwaysOff</enum>
+               </property>
+               <property name="horizontalScrollBarPolicy">
+                <enum>Qt::ScrollBarAlwaysOff</enum>
+               </property>
+               <property name="sizeAdjustPolicy">
+                <enum>QAbstractScrollArea::AdjustToContentsOnFirstShow</enum>
+               </property>
+               <property name="renderHints">
+                <set>QPainter::Antialiasing|QPainter::TextAntialiasing</set>
+               </property>
+              </widget>
              </item>
              <item>
               <layout class="QHBoxLayout" name="horizontalLayout_2">
@@ -104,33 +117,42 @@
                </property>
                <item>
                 <widget class="QToolButton" name="tb_start">
+                 <property name="toolTip">
+                  <string>Запустить симуляцию</string>
+                 </property>
                  <property name="text">
                   <string>...</string>
                  </property>
                  <property name="icon">
-                  <iconset resource="resources/data.qrc">
+                  <iconset resource="../resources/data.qrc">
                    <normaloff>:/start.png</normaloff>:/start.png</iconset>
                  </property>
                 </widget>
                </item>
                <item>
                 <widget class="QToolButton" name="tb_pause">
+                 <property name="toolTip">
+                  <string>Поставить на паузу</string>
+                 </property>
                  <property name="text">
                   <string>...</string>
                  </property>
                  <property name="icon">
-                  <iconset resource="resources/data.qrc">
+                  <iconset resource="../resources/data.qrc">
                    <normaloff>:/pause.png</normaloff>:/pause.png</iconset>
                  </property>
                 </widget>
                </item>
                <item>
                 <widget class="QToolButton" name="tb_stop">
+                 <property name="toolTip">
+                  <string>Остановить симуляцию</string>
+                 </property>
                  <property name="text">
                   <string>...</string>
                  </property>
                  <property name="icon">
-                  <iconset resource="resources/data.qrc">
+                  <iconset resource="../resources/data.qrc">
                    <normaloff>:/stop.png</normaloff>:/stop.png</iconset>
                  </property>
                 </widget>
@@ -195,7 +217,7 @@
                 </widget>
                </item>
                <item>
-                <widget class="QLabel" name="label_3">
+                <widget class="QLabel" name="label_time">
                  <property name="text">
                   <string>0</string>
                  </property>
@@ -269,8 +291,15 @@
    </property>
   </widget>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>IgnoreDndGraphicsView</class>
+   <extends>QGraphicsView</extends>
+   <header>ignoredndgraphicsview.h</header>
+  </customwidget>
+ </customwidgets>
  <resources>
-  <include location="resources/data.qrc"/>
+  <include location="../resources/data.qrc"/>
  </resources>
  <connections/>
 </ui>

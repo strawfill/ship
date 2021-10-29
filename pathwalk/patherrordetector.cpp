@@ -240,6 +240,21 @@ void PathErrorDetector::detectProcessingTracErrors() const
                        << ") время начала сбора датчиков (" << collection.first
                        << ") меньше времени завершения прострела (" << shooting.second << ")";
         }
+
+        // и что в эти моменты трасса открыта
+        auto testTracOpen = [&trac](const TimePair &pair, const QString &activityName) {
+            if (trac.nearAvailable(pair.first, pair.second - pair.first) != pair.first) {
+                qWarning() << "В" << formatPath << "трасса ("
+                           << trac.p1().x() << trac.p1().y() << trac.p2().x() << trac.p2().y()
+                           << ") при выполнении операции" << activityName
+                           << "не всегда является доступной";
+            }
+        };
+
+        testTracOpen(layout, "раскладка");
+        testTracOpen(shooting, "прострел");
+        testTracOpen(collection, "сбор");
+
     }
 
 

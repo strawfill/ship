@@ -15,12 +15,19 @@ set(BUILD_DIR ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 
 find_package(Qt5 COMPONENTS Widgets Gui REQUIRED)
 
-include_directories("reader" "other" "viewer" "pathwalk")
+include_directories("reader" "other" "viewer" "pathwalk" "viewer/graphicsitems")
 
 set(VIEWER
     viewer/mainwindow.h
     viewer/mainwindow.cpp
     viewer/mainwindow.ui
+    viewer/simulationscene.h
+    viewer/simulationscene.cpp
+    viewer/ignoredndgraphicsview.h
+    viewer/ignoredndgraphicsview.cpp
+    viewer/graphicsitems/graphicsiteminterface.h
+    viewer/graphicsitems/tracgraphicsitem.h
+    viewer/graphicsitems/tracgraphicsitem.cpp
     )
 
 set(READER

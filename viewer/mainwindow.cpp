@@ -1,14 +1,16 @@
-#include <QMimeData>
+#include <QClipboard>
 #include <QDebug>
 #include <QFileInfo>
+#include <QMimeData>
 #include <QTemporaryFile>
 
 #include "debugcatcher.h"
-#include "sourcefilereader.h"
-#include "sourceerrordetector.h"
-#include "rawdata.h"
 #include "prepareddata.h"
 #include "patherrordetector.h"
+#include "rawdata.h"
+#include "simulationscene.h"
+#include "sourceerrordetector.h"
+#include "sourcefilereader.h"
 
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
@@ -16,12 +18,31 @@
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
+    , scene(new SimulationScene(this))
+    , pastAction(new QAction(this))
 {
     ui->setupUi(this);
     // чтобы второй был минимального размера
     ui->splitter->setSizes({10000, 1});
 
     connect(DebugCatcher::instance(), &DebugCatcher::messageRecieved, ui->plainTextEdit, &QPlainTextEdit::appendPlainText);
+
+    connect(ui->tb_start, &QToolButton::clicked, scene, &SimulationScene::startSimulation);
+    connect(ui->tb_pause, &QToolButton::clicked, scene, &SimulationScene::pauseSimulation);
+    connect(ui->tb_stop, &QToolButton::clicked, scene, &SimulationScene::stopSimulation);
+    connect(ui->doubleSpinBox_speed, QOverload<double>::of(&QDoubleSpinBox::valueChanged), scene, &SimulationScene::setSimulationSpeed);
+
+    connect(scene, &SimulationScene::simulationTimeChanged, ui->label_time, &QLabel::setText);
+
+    ui->graphicsView->setScene(scene->getScene());
+
+
+    ui->graphicsView->setDragMode(QGraphicsView::ScrollHandDrag);
+    ui->graphicsView->scale(1, -1);
+
+    addAction(pastAction);
+    pastAction->setShortcut(QKeySequence::Paste);
+    connect(pastAction, &QAction::triggered, this, &MainWindow::postFromClipboardRequested);
 }
 
 MainWindow::~MainWindow()
@@ -38,26 +59,7 @@ void MainWindow::dragEnterEvent(QDragEnterEvent *event)
 
 void MainWindow::dropEvent(QDropEvent *event)
 {
-    if (!hasGoodFormat(event->mimeData())) {
-        setWindowTitle("StrawberryShip");
-        return;
-    }
-
-    if (event->mimeData()->urls().size() == 1) {
-        QString filename{ event->mimeData()->urls().first().toLocalFile() };
-        setWindowTitle("StrawberryShip @ " + filename);
-        return processFile(filename);
-    }
-
-    if (event->mimeData()->hasText()) {
-        setWindowTitle("StrawberryShip @ via d&d text");
-        QTemporaryFile tempfile;
-        tempfile.open();
-        tempfile.write(event->mimeData()->text().toUtf8());
-        // вернёмся в начало, чтобы можно было что-то читать (хотя тут непонятно, как это работает...)
-        tempfile.seek(0);
-        return processFile(tempfile.fileName());
-    }
+    processMimeData(event->mimeData());
 }
 
 bool MainWindow::hasGoodFormat(const QMimeData *data)
@@ -83,6 +85,35 @@ bool MainWindow::hasGoodFormat(const QMimeData *data)
     return true;
 }
 
+void MainWindow::processMimeData(const QMimeData *data)
+{
+    scene->clear();
+
+    if (!data)
+        return;
+
+    if (!hasGoodFormat(data)) {
+        setWindowTitle("StrawberryShip");
+        return;
+    }
+
+    if (data->urls().size() == 1) {
+        QString filename{ data->urls().first().toLocalFile() };
+        setWindowTitle("StrawberryShip @ " + filename);
+        return processFile(filename);
+    }
+
+    if (data->hasText()) {
+        setWindowTitle("StrawberryShip @ via d&d text");
+        QTemporaryFile tempfile;
+        tempfile.open();
+        tempfile.write(data->text().toUtf8());
+        // вернёмся в начало, чтобы можно было что-то читать (хотя тут непонятно, как это работает...)
+        tempfile.seek(0);
+        return processFile(tempfile.fileName());
+    }
+}
+
 void MainWindow::processFile(const QString &filename)
 {
     Q_ASSERT(QFileInfo(filename).isFile());
@@ -96,7 +127,7 @@ void MainWindow::processFile(const QString &filename)
     if (DebugCatcher::instance()->warningsCount())
         return;
 
-    prepared::DataStatic ds(reader.dat());
+    prepared::DataStatic sd(reader.dat());
     prepared::DataDynamic dd(reader.dat());
 
     // в ds тоже несколько ошибок проверяется...
@@ -104,16 +135,25 @@ void MainWindow::processFile(const QString &filename)
         return;
 
     if (dd.has) {
-        PathErrorDetector pathErrorDetector(ds, dd);
+        PathErrorDetector pathErrorDetector(sd, dd);
 
         if (DebugCatcher::instance()->warningsCount())
             return;
     }
 
-
+    // и мы можем уже задать текущие данные для графической симуляции
+    // не важно, есть ли path, мы просто отрисуем трассы тогда
+    scene->setSources(sd, dd);
 
     ui->plainTextEdit->appendPlainText("-- ошибок не обнаружено");
-    if (dd.has)
-        ui->plainTextEdit->appendPlainText("-- стоимость аренды по маршруту равна " +
-                                           QString::number(prepared::totalCost(ds, dd)));
+    if (dd.has) {
+        ui->plainTextEdit->appendPlainText("-- стоимость аренды по маршруту из исходных данных равна " +
+                                           QString::number(prepared::totalCost(sd, dd)));
+        return;
+    }
+}
+
+void MainWindow::postFromClipboardRequested()
+{
+    processMimeData(QGuiApplication::clipboard()->mimeData());
 }
