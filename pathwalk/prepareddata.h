@@ -157,11 +157,12 @@ private:
 };
 
 using PathDot = raw::PathDot;
+using Path = QVector<PathDot>;
 
 struct DataDynamic
 {
-    QVector<PathDot> pathShooter;
-    QVector<PathDot> pathHandler;
+    Path pathShooter;
+    Path pathHandler;
     QString shooterName;
     QString handlerName;
     bool has{ false };

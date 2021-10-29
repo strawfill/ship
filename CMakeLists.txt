@@ -25,9 +25,13 @@ set(VIEWER
     viewer/simulationscene.cpp
     viewer/ignoredndgraphicsview.h
     viewer/ignoredndgraphicsview.cpp
+    viewer/graphicsviewzoomer.h
+    viewer/graphicsviewzoomer.cpp
     viewer/graphicsitems/graphicsiteminterface.h
     viewer/graphicsitems/tracgraphicsitem.h
     viewer/graphicsitems/tracgraphicsitem.cpp
+    viewer/graphicsitems/shipgraphicsitem.h
+    viewer/graphicsitems/shipgraphicsitem.cpp
     )
 
 set(READER

@@ -2,6 +2,7 @@
 
 #include "prepareddata.h"
 #include "tracgraphicsitem.h"
+#include "shipgraphicsitem.h"
 
 #include <QGraphicsScene>
 #include <QTimer>
@@ -15,6 +16,8 @@ struct SimulationData
     DataDynamic dd;
 
     QVector<TracGraphicsItem *> tracs;
+    ShipGraphicsItem *handler;
+    ShipGraphicsItem *shooter;
 };
 
 
@@ -65,11 +68,19 @@ void SimulationScene::startSimulation()
     if (!data)
         return;
 
+    // мы обнулили это время, но оставили hourBase
+    hour = 0;
+
+    eltimer.restart();
+
     tickTimer->start();
 }
 
 void SimulationScene::pauseSimulation()
 {
+    // запомним текущее состояние
+    hourBase = hour;
+
     tickTimer->stop();
 }
 
@@ -96,15 +107,18 @@ void SimulationScene::setSimulationSpeed(double hoursInSec)
 void SimulationScene::timerTicked()
 {
     hour = hourBase + eltimer.elapsed() * 0.001 * speed;
+
+    // достигли конца, поэтому можно и остановиться
+    if (!runAfterEnd && endSimulationTime > 0 && hour > endSimulationTime) {
+        hour = endSimulationTime; // чтобы ровное число было, хотя на самом деле так писать не очень правильно
+        runAfterEnd = true;
+        pauseSimulation();
+    }
+
     updateScene();
 
     emitSimulationTimeChanged();
 
-    // достигли конца, поэтому можно и остановиться
-    if (!runAfterEnd && endSimulationTime > 0 && hour > endSimulationTime) {
-        runAfterEnd = true;
-        pauseSimulation();
-    }
 }
 
 void SimulationScene::initSceneItems()
@@ -121,28 +135,21 @@ void SimulationScene::initSceneItems()
         scene->addItem(item);
         data->tracs.append(item);
     }
-/*
-    auto r{ scene->itemsBoundingRect() };
-    double max{ 0 };
-    if (max < qAbs(r.left()))
-        max = qAbs(r.left());
-    if (max < qAbs(r.right()))
-        max = qAbs(r.right());
-    if (max < qAbs(r.top()))
-        max = qAbs(r.top());
-    if (max < qAbs(r.bottom()))
-        max = qAbs(r.bottom());
-    max += 100;
 
-    scene->setSceneRect(QRectF{ -max, -max, 2*max, 2*max });
-    */
+    data->handler = new ShipGraphicsItem(QPixmap{":/handler.png"},
+                                         data->ds.handlerViaName(data->dd.handlerName).speed(),
+                                         data->dd.pathHandler);
+    scene->addItem(data->handler);
 
+    data->shooter = new ShipGraphicsItem(QPixmap{":/shooter.png"},
+                                         data->ds.shooterViaName(data->dd.shooterName).speed(),
+                                         data->dd.pathShooter);
+    scene->addItem(data->shooter);
 
     QRectF rect{-200, -200, 400, 400};
     rect |= scene->itemsBoundingRect().translated(100, 100);
     rect |= scene->itemsBoundingRect().translated(-100, 100);
     scene->setSceneRect(rect);
-
 }
 
 void SimulationScene::updateScene()
@@ -152,6 +159,9 @@ void SimulationScene::updateScene()
 
     for (const auto & p : data->tracs)
         p->setHour(hour);
+
+    data->handler->setHour(hour);
+    data->shooter->setHour(hour);
 }
 
 void SimulationScene::resetTime()

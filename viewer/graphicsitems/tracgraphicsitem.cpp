@@ -3,10 +3,6 @@
 #include <QPen>
 #include <QtMath>
 
-TracGraphicsItem::TracGraphicsItem()
-{
-}
-
 TracGraphicsItem::TracGraphicsItem(const prepared::Trac &atrac)
     : QGraphicsLineItem(atrac.line())
     , trac(atrac)

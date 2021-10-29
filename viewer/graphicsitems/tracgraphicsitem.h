@@ -9,7 +9,6 @@
 class TracGraphicsItem : public QGraphicsLineItem, public GraphicsItemInterface
 {
 public:
-    TracGraphicsItem();
     TracGraphicsItem(const prepared::Trac &atrac);
 
     void setHour(double hour) override;

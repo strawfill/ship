@@ -5,6 +5,7 @@
 #include <QTemporaryFile>
 
 #include "debugcatcher.h"
+#include "graphicsviewzoomer.h"
 #include "prepareddata.h"
 #include "patherrordetector.h"
 #include "rawdata.h"
@@ -31,6 +32,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->tb_pause, &QToolButton::clicked, scene, &SimulationScene::pauseSimulation);
     connect(ui->tb_stop, &QToolButton::clicked, scene, &SimulationScene::stopSimulation);
     connect(ui->doubleSpinBox_speed, QOverload<double>::of(&QDoubleSpinBox::valueChanged), scene, &SimulationScene::setSimulationSpeed);
+    scene->setSimulationSpeed(ui->doubleSpinBox_speed->value());
 
     connect(scene, &SimulationScene::simulationTimeChanged, ui->label_time, &QLabel::setText);
 
@@ -39,6 +41,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui->graphicsView->setDragMode(QGraphicsView::ScrollHandDrag);
     ui->graphicsView->scale(1, -1);
+
+    new GraphicsViewZoomer(ui->graphicsView);
 
     addAction(pastAction);
     pastAction->setShortcut(QKeySequence::Paste);
@@ -104,7 +108,7 @@ void MainWindow::processMimeData(const QMimeData *data)
     }
 
     if (data->hasText()) {
-        setWindowTitle("StrawberryShip @ via d&d text");
+        setWindowTitle("StrawberryShip @ via text");
         QTemporaryFile tempfile;
         tempfile.open();
         tempfile.write(data->text().toUtf8());
