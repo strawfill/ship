@@ -1,6 +1,7 @@
 #include "shipgraphicsitem.h"
 
 #include <valarray>
+#include <QtMath>
 
 using namespace prepared;
 
@@ -90,6 +91,8 @@ QPair<prepared::PathDot, prepared::PathDot> ShipGraphicsItem::getCurrentDots(dou
 
 void ShipGraphicsItem::setShipPosition(double x, double y)
 {
+    // не понимаю, почему здесь смещение должно быть по оси y отрицательным
+    // очень многое сделано на подборе
     QPointF current{ QPointF{ x, y } - QPoint{ offset.x(), -offset.y() }  };
     if (pos() != current) {
         // система координат конечно немного не та...
@@ -104,9 +107,14 @@ void ShipGraphicsItem::setShipPosition(double x1, double y1, double x2, double y
     if (minH == maxH)
         return setShipPosition(x2, y2);
 
-    double percent{ qBound(0., (curH - minH) / (maxH-minH), 100.) };
-    double dx{ (x2-x1)*percent };
-    double dy{ (y2-y1)*percent };
+    // закомментирована реализация, которая ничего не знала о скорости судна и выравнивала его относительно общего времени
+    // это искажало реальную скорость и делало симуляцию менее наглядной и соответствующей реальности
+    //double percent{ qBound(0., (curH - minH) / (maxH-minH), 1.) };
+    double dx{ (x2-x1) };
+    double dy{ (y2-y1) };
+    double percent{ qBound(0., (curH - minH) * speed / qSqrt(dx*dx + dy*dy), 1.) };
+    dx *= percent;
+    dy *= percent;
 
     setShipPosition(x1+dx, y1+dy);
 
@@ -138,7 +146,9 @@ void ShipGraphicsItem::setShipRotation(double rotation, double hourInThatTrac)
             setRotation(qRound(resrot));
         }
         else {
-            delta = 360 - qAbs(delta);
+            // методом подбора вся реализация функции и построена
+            // не до конца понимаю, почему именно такие числа нужно вставлять
+            delta = delta - 360;
             double resrot{ rotationAtTracStart + delta * qBound(0., hourInThatTrac, 1.) };
             setRotation(qRound(resrot));
         }
