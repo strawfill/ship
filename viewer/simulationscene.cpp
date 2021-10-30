@@ -5,6 +5,7 @@
 #include "shipgraphicsitem.h"
 
 #include <QGraphicsScene>
+#include <QKeySequence>
 #include <QTimer>
 
 using namespace prepared;
@@ -31,6 +32,8 @@ SimulationScene::SimulationScene(QObject *parent)
 {
     tickTimer->setInterval(10); // 100 Гц, мой новый ноутбук крутой и такое отобразит и посчитает
     connect(tickTimer, &QTimer::timeout, this, &SimulationScene::timerTicked);
+
+    clear();
 }
 
 SimulationScene::~SimulationScene()
@@ -61,6 +64,12 @@ void SimulationScene::clear()
 
     tickTimer->stop();
     resetTime();
+
+    scene->setSceneRect(QRect());
+    // добавим плейсхолдер
+    scene->addText("Для начала работы перетащите или вставьте через " +
+                   QKeySequence(QKeySequence::Paste).toString() +
+                   "\n       сюда файл или текст с исходными данными");
 }
 
 void SimulationScene::startSimulation()
@@ -68,8 +77,9 @@ void SimulationScene::startSimulation()
     if (!data)
         return;
 
-    // мы обнулили это время, но оставили hourBase
-    hour = 0;
+    // если нажать на старт симуляции, когда она уже идёт, то время сбросится до ближайшей паузы
+    // или смены скорости. Это баг, который я назвал фичей. К кнопке добавлено всплывающее описание,
+    // не прикопаться
 
     eltimer.restart();
 
@@ -121,17 +131,98 @@ void SimulationScene::timerTicked()
 
 }
 
+namespace {
+
+using PathDotPair = QPair<PathDot, PathDot>;
+using PathDotPairVector = QVector<PathDotPair>;
+using IntPair = QPair<int, int>;
+using IntPairVector = QVector<IntPair>;
+using Line2PDPV = QMap<Line, PathDotPairVector>;
+
+Line2PDPV getTracToPathMap(const DataStatic &ds, const DataDynamic &dd) {
+    // заполним для каждой трассы действия кораблей
+    Line2PDPV map;
+
+    for (const auto & trac : ds.tracs)
+        map.insert(trac.line(), {});
+
+    auto fillFrom = [&map, &ds](const QVector<PathDot> &pd) {
+        for (int i = 1; i < pd.size(); ++i) {
+            const auto & bef{ pd.at(i-1) };
+            const auto & cur{ pd.at(i) };
+
+            if (bef.activity == sa_layout || bef.activity == sa_collection || bef.activity == sa_shooting) {
+
+                const Trac trac{ ds.tracViaLine(Line{ bef.x, bef.y, cur.x, cur.y }) };
+
+                // это проверяется в другом месте, здесь же будет только мешать. Пропустим
+                if (!trac.valid())
+                    continue;
+
+                // тут нет лишних действий, trac.line() не обязательно равен Line{ bef.x, bef.y, cur.x, cur.y }
+
+                auto vector{ map.value(trac.line()) };
+                vector.append({bef, cur});
+                map.insert(trac.line(), vector);
+            }
+        }
+    };
+
+    fillFrom(dd.pathHandler);
+    fillFrom(dd.pathShooter);
+
+    return map;
+}
+
+IntPairVector getActionTimesForLine(const Line &line, const Line2PDPV &map)
+{
+    const auto & v{ map.value(line) };
+
+    if (v.size() != 3)
+        return {};
+
+    IntPair layout, shooting, collection;
+
+    for (int i = 0; i < v.size(); ++i) {
+        const auto pair{ v.at(i) };
+        if (pair.first.activity == sa_layout) {
+            layout = { pair.first.timeH, pair.second.timeH };
+        }
+        else if (pair.first.activity == sa_shooting) {
+            shooting = { pair.first.timeH, pair.second.timeH };
+        }
+        else if (pair.first.activity == sa_collection) {
+            collection = { pair.first.timeH, pair.second.timeH };
+        }
+    }
+
+    IntPairVector result;
+    result.reserve(3);
+    result.append(layout);
+    result.append(shooting);
+    result.append(collection);
+
+    return result;
+}
+} // end anonymous namespace
+
 void SimulationScene::initSceneItems()
 {
     if (!data)
         return;
 
+    // уберём плейсхолдер
+    scene->clear();
+
+    // чтобы начало координат было
     scene->addLine(-100, 0, 100, 0, QPen{Qt::gray});
     scene->addLine(0, -100, 0, 100, QPen{Qt::gray});
 
+    auto map{ getTracToPathMap(data->ds, data->dd) };
+
     data->tracs.reserve(data->ds.tracs.size());
-    for (const auto & t : data->ds.tracs) {
-        auto item{ new TracGraphicsItem(t) };
+    for (const auto & t : qAsConst(data->ds.tracs)) {
+        auto item{ new TracGraphicsItem(t, getActionTimesForLine(t.line(), map)) };
         scene->addItem(item);
         data->tracs.append(item);
     }
@@ -148,7 +239,7 @@ void SimulationScene::initSceneItems()
 
     QRectF rect{-200, -200, 400, 400};
     rect |= scene->itemsBoundingRect().translated(100, 100);
-    rect |= scene->itemsBoundingRect().translated(-100, 100);
+    rect |= scene->itemsBoundingRect().translated(-100, -100);
     scene->setSceneRect(rect);
 }
 
@@ -157,7 +248,7 @@ void SimulationScene::updateScene()
     if (!data)
         return;
 
-    for (const auto & p : data->tracs)
+    for (const auto & p : qAsConst(data->tracs))
         p->setHour(hour);
 
     data->handler->setHour(hour);
@@ -190,6 +281,7 @@ void SimulationScene::calculateEndSimulationTime()
 
 void SimulationScene::emitSimulationTimeChanged()
 {
+    // сделаем красивую строчку, длина которой не будет постоянно прыгать от числа к числу
     QString time;
 
     if (qFuzzyIsNull(hour))

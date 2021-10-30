@@ -144,7 +144,7 @@ void SourceFileReader::readSourceFile(QString filename)
             qWarning().noquote() << QString{"Строка %1. Ожидалось ключевое слово, но была встречена строка '%2'. "
                                             "Данная строка не будет учтена"}.arg(in.strLineNumber()).arg(in.currentLine);
         }
-        enum { max_error_count = 1000 };
+        enum { max_error_count = 100 };
         if (DebugCatcher::instance()->warningsCount() > max_error_count) {
             qWarning().noquote() << QString{"Файл содержит не менее %1 ошибок. Дальнейший разбор содержимого "
                                             "остановлен "}.arg(max_error_count);

@@ -7,6 +7,12 @@ int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
 
+    QCoreApplication::setApplicationName("StrawberryShip");
+    QCoreApplication::setApplicationVersion("1.0");
+    // да, я тут работаю...
+    QCoreApplication::setOrganizationName("Informtest");
+
+
     // Красивый шрифт приложения
     int id = QFontDatabase::addApplicationFont(":/SourceCodePro-Regular.ttf");
     if(id != -1){

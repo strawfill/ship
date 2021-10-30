@@ -30,6 +30,9 @@ private:
     void processFile(const QString &filename);
     void postFromClipboardRequested();
 
+    void loadSettings();
+    void saveSettings();
+
 private:
     Ui::MainWindow *ui;
     SimulationScene *scene{ nullptr };

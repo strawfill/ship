@@ -118,7 +118,10 @@
                <item>
                 <widget class="QToolButton" name="tb_start">
                  <property name="toolTip">
-                  <string>Запустить симуляцию</string>
+                  <string>Запустить симуляцию/
+перезапустить с момента
+последней паузы\смены
+скорости</string>
                  </property>
                  <property name="text">
                   <string>...</string>
@@ -192,7 +195,7 @@
                   <double>1000.000000000000000</double>
                  </property>
                  <property name="singleStep">
-                  <double>0.100000000000000</double>
+                  <double>1.000000000000000</double>
                  </property>
                  <property name="stepType">
                   <enum>QAbstractSpinBox::DefaultStepType</enum>

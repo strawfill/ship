@@ -2,6 +2,7 @@
 #include <QDebug>
 #include <QFileInfo>
 #include <QMimeData>
+#include <QSettings>
 #include <QTemporaryFile>
 
 #include "debugcatcher.h"
@@ -40,21 +41,54 @@ MainWindow::MainWindow(QWidget *parent)
 
 
     ui->graphicsView->setDragMode(QGraphicsView::ScrollHandDrag);
-    ui->graphicsView->scale(1, -1);
 
     new GraphicsViewZoomer(ui->graphicsView);
 
     addAction(pastAction);
     pastAction->setShortcut(QKeySequence::Paste);
     connect(pastAction, &QAction::triggered, this, &MainWindow::postFromClipboardRequested);
+
+    loadSettings();
 }
 
 MainWindow::~MainWindow()
 {
+    saveSettings();
     delete ui;
 }
 
+void MainWindow::loadSettings()
+{
+    // не хочу пачкать реестр
+    QSettings s("settings.ini", QSettings::IniFormat);
 
+    s.beginGroup("mainwindow");
+    ui->splitter->restoreState(s.value("splitter").toByteArray());
+    restoreGeometry(s.value("geometry").toByteArray());
+    s.endGroup();
+
+
+    s.beginGroup("simulation");
+    ui->doubleSpinBox_speed->setValue(s.value("speed", 10.).toDouble());
+    // spinBox не даст поставить что-то плохое
+    scene->setSimulationSpeed(ui->doubleSpinBox_speed->value());
+    s.endGroup();
+}
+
+void MainWindow::saveSettings()
+{
+    // не хочу пачкать реестр
+    QSettings s("settings.ini", QSettings::IniFormat);
+
+    s.beginGroup("mainwindow");
+    s.setValue("splitter", ui->splitter->saveState());
+    s.setValue("geometry", saveGeometry());
+    s.endGroup();
+
+    s.beginGroup("simulation");
+    s.setValue("speed", ui->doubleSpinBox_speed->value());
+    s.endGroup();
+}
 
 void MainWindow::dragEnterEvent(QDragEnterEvent *event)
 {
@@ -77,7 +111,7 @@ bool MainWindow::hasGoodFormat(const QMimeData *data)
 
     if (!data->hasUrls() || data->urls().size() != 1)
         return false;
-    const QString filename{ data->urls().first().toLocalFile() };
+    const QString filename{ data->urls().constFirst().toLocalFile() };
     QFileInfo fileInfo(filename);
     if (!fileInfo.isFile())
         return false;
@@ -102,7 +136,7 @@ void MainWindow::processMimeData(const QMimeData *data)
     }
 
     if (data->urls().size() == 1) {
-        QString filename{ data->urls().first().toLocalFile() };
+        QString filename{ data->urls().constFirst().toLocalFile() };
         setWindowTitle("StrawberryShip @ " + filename);
         return processFile(filename);
     }

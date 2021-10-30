@@ -62,6 +62,7 @@ private:
 
     int endSimulationTime{ 0 };
     bool runAfterEnd{ false };
+    bool nowRunning{ false };
 };
 
 #endif // SIMULATIONSCENE_H

@@ -17,12 +17,13 @@ private:
     QPair<prepared::PathDot, prepared::PathDot> getCurrentDots(double hour) const;
     void setShipPosition(double x, double y);
     void setShipPosition(double x1, double y1, double x2, double y2, int minH, int maxH, double curH);
-    void setShipRotation(double rotation);
+    void setShipRotation(double rotation, double hourInThatTrac);
 
 private:
     prepared::Path path;
     QPoint offset;
     int speed{};
+    mutable int rotationAtTracStart{};
     mutable int memoriesIndex{};
 };
 
