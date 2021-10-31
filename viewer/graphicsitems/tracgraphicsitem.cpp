@@ -26,14 +26,18 @@ void TracGraphicsItem::setHour(double hour)
 
 QPen TracGraphicsItem::penForState(TracState state)
 {
+    auto createpen = [](const QColor &c, Qt::PenStyle ps) {
+        return QPen{ c, 3, ps, Qt::RoundCap };
+    };
+
     switch (state) {
-    case ts_disabled:   return QPen{QColor{0xff, 0x24, 0x00}, 3, Qt::SolidLine};
-    case ts_enabled:    return QPen{QColor{0x03, 0xAC, 0x13}, 3, Qt::SolidLine};
-    case ts_layout:     return QPen{QColor{0x00, 0x99, 0xCC}, 3, Qt::DotLine};
-    case ts_collection: return QPen{QColor{0x66, 0x00, 0x66}, 3, Qt::DotLine};
-    case ts_shooting:   return QPen{QColor{0xFF, 0x99, 0x33}, 3, Qt::DotLine};
-    case ts_after_disabled:   return QPen{QColor{0xff, 0x24, 0x00, 0x20}, 3, Qt::SolidLine};
-    case ts_after_enabled:    return QPen{QColor{0x03, 0xAC, 0x13, 0x20}, 3, Qt::SolidLine};
+    case ts_disabled:   return createpen({0xff, 0x24, 0x00}, Qt::SolidLine);
+    case ts_enabled:    return createpen({0x03, 0xAC, 0x13}, Qt::SolidLine);
+    case ts_layout:     return createpen({0x00, 0x99, 0xCC}, Qt::DotLine);
+    case ts_collection: return createpen({0x66, 0x00, 0x66}, Qt::DotLine);
+    case ts_shooting:   return createpen({0xFF, 0x99, 0x33}, Qt::DotLine);
+    case ts_after_disabled:   return createpen({0xff, 0x24, 0x00, 0x20}, Qt::SolidLine);
+    case ts_after_enabled:    return createpen({0x03, 0xAC, 0x13, 0x20}, Qt::SolidLine);
     }
     return {};
 }
