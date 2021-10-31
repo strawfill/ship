@@ -22,16 +22,15 @@ public:
 
 private:
     enum TracState {
-        ts_disabled,
-        ts_enabled,
+        ts_after_start,
         ts_layout,
-        ts_collection,
+        ts_after_layout,
         ts_shooting,
-        // когда все действия сделаны, аналоги первых двух
-        ts_after_disabled,
-        ts_after_enabled,
+        ts_after_shooting,
+        ts_collection,
+        ts_after_collection,
     };
-    static QPen penForState(TracState state);
+    static QPen penForState(TracState state, bool enabled);
     TracState getState(double hour) const;
 
 private:
