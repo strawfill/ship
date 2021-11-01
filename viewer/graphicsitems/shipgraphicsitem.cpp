@@ -2,17 +2,20 @@
 
 #include <valarray>
 #include <QtMath>
+#include <QPainter>
 
 using namespace prepared;
 
 namespace {
 constexpr int initRotation{ 0 };
+constexpr QSize size{ 8, 26 };
 }
 
-ShipGraphicsItem::ShipGraphicsItem(const QPixmap &pixmap, int aspeed, const prepared::Path &apath)
-    : QGraphicsPixmapItem(pixmap)
-    , path(apath)
-    , offset(pixmap.width()/2, pixmap.height()/2)
+ShipGraphicsItem::ShipGraphicsItem(raw::Ship::Type atype, int aspeed, const prepared::Path &apath)
+    : QGraphicsPathItem(atype == raw::Ship::Type::handler ? handlerPath() : shooterPath())
+    , mpath(apath)
+    , type(atype)
+    , offset(size.width()/2, size.height()/2)
     , speed(aspeed)
 {
     setShipPosition(0, 0);
@@ -28,7 +31,7 @@ void ShipGraphicsItem::setHour(double hour)
         return;
     }
 
-    if (path.size() < 2)
+    if (mpath.size() < 2)
         return;
 
     auto dots{ getCurrentDots(hour) };
@@ -53,36 +56,36 @@ void ShipGraphicsItem::setHour(double hour)
 
 QPair<prepared::PathDot, prepared::PathDot> ShipGraphicsItem::getCurrentDots(double hour) const
 {
-    if (path.size() < 2)
+    if (mpath.size() < 2)
         return {};
 
     // попытаемся воспользоваться запомненным индексом, чтобы долго не искать две точки
 
     // если запомненный индекс полностью подходит
-    if (memoriesIndex >= 0 && memoriesIndex+1 < path.size() &&
-            path.at(memoriesIndex).timeH <= hour && path.at(memoriesIndex+1).timeH >= hour) {
-        return {path.at(memoriesIndex), path.at(memoriesIndex+1)};
+    if (memoriesIndex >= 0 && memoriesIndex+1 < mpath.size() &&
+            mpath.at(memoriesIndex).timeH <= hour && mpath.at(memoriesIndex+1).timeH >= hour) {
+        return {mpath.at(memoriesIndex), mpath.at(memoriesIndex+1)};
     }
 
     // если запомненный индекс некорректен
-    if (memoriesIndex < 0 || memoriesIndex+1 >= path.size() || path.at(memoriesIndex).timeH > hour) {
+    if (memoriesIndex < 0 || memoriesIndex+1 >= mpath.size() || mpath.at(memoriesIndex).timeH > hour) {
         // сбросим его
         memoriesIndex = 0;
     }
 
     //теперь будем перебирать по точкам...
-    for (int i = 1; i < path.size(); ++i) {
-        if (path.at(i-1).timeH <= hour && path.at(i).timeH >= hour) {
+    for (int i = 1; i < mpath.size(); ++i) {
+        if (mpath.at(i-1).timeH <= hour && mpath.at(i).timeH >= hour) {
             memoriesIndex = i-1;
             rotationAtTracStart = qRound(rotation());
-            return {path.at(memoriesIndex), path.at(memoriesIndex+1)};
+            return {mpath.at(memoriesIndex), mpath.at(memoriesIndex+1)};
         }
     }
 
-    if (path.last().timeH < hour) {
-        memoriesIndex = path.size()-2;
+    if (mpath.last().timeH < hour) {
+        memoriesIndex = mpath.size()-2;
         rotationAtTracStart = qRound(rotation());
-        return {path.at(memoriesIndex), path.at(memoriesIndex+1)};
+        return {mpath.at(memoriesIndex), mpath.at(memoriesIndex+1)};
     }
 
     // надеюсь, такого исхода нет
@@ -164,4 +167,101 @@ void ShipGraphicsItem::setShipRotation(double rotation, double hourInThatTrac)
         //setRotation(result);
         update();
     }
+}
+
+QPainterPath ShipGraphicsItem::handlerPath()
+{
+    const int height{ size.height() };
+    int partHair{ 4 }; // высота начального закругления
+    int partTail{ 2 }; // высота конечной кабины
+    QRect beginRect{ QPoint{1,0}, QSize{ size.width()-2, partHair*2 } };
+    QRect bodyRect{ QPoint{1,partHair}, QSize{ size.width()-1, height - partHair - partTail } };
+
+    QPainterPath pp;
+    pp.arcMoveTo(beginRect, 0);
+    pp.arcTo(beginRect, 0, 180);
+    pp.lineTo(bodyRect.topLeft());
+    pp.lineTo(bodyRect.bottomLeft());
+    pp.lineTo(bodyRect.bottomLeft()  += QPoint{-1, 0});
+    pp.lineTo(bodyRect.bottomLeft()  += QPoint{-1, 1});
+    pp.lineTo(bodyRect.bottomLeft()  += QPoint{ 1, 1});
+    pp.lineTo(bodyRect.bottomRight() += QPoint{-1, 1});
+    pp.lineTo(bodyRect.bottomLeft()  += QPoint{ 1, 1});
+    int deltaToBottom{ height - bodyRect.bottom() };
+    pp.lineTo(bodyRect.bottomLeft()  += QPoint{ 1, deltaToBottom});
+    pp.lineTo(bodyRect.bottomRight() += QPoint{-1, deltaToBottom});
+    pp.lineTo(bodyRect.bottomRight() += QPoint{-1, 1});
+    pp.lineTo(bodyRect.bottomRight() += QPoint{ 1, 1});
+    pp.lineTo(bodyRect.bottomRight() += QPoint{ 1, 0});
+
+    pp.lineTo(bodyRect.bottomRight());
+    pp.lineTo(bodyRect.topRight());
+
+    for (int i = bodyRect.top(); i < bodyRect.bottom()-1; i += 3) {
+        pp.addEllipse(bodyRect.left(), i, 1, 1);
+        pp.addEllipse(bodyRect.right()-1, i, 1, 1);
+    }
+
+    pp.moveTo(QPoint{size.width()/2, partHair/3});
+    pp.lineTo(QPoint{size.width()/2, bodyRect.bottom()-3});
+
+    return pp;
+}
+
+QPainterPath ShipGraphicsItem::shooterPath()
+{
+    const int height{ size.height() };
+    int partHair{ 16 }; // высота начального закругления
+    int partTail{  4 }; // высота конечной кабины
+    QRect beginRect{ QPoint{1,0}, QSize{ size.width()-2, partHair*2 } };
+    QRect bodyRect{ QPoint{1,partHair}, QSize{ size.width()-1, height - partHair - partTail } };
+
+    QPainterPath pp;
+    pp.arcMoveTo(beginRect, 0);
+    pp.arcTo(beginRect, 0, 180);
+    pp.lineTo(bodyRect.topLeft());
+    pp.lineTo(bodyRect.bottomLeft());
+    pp.lineTo(bodyRect.bottomLeft()  += QPoint{-1, 0});
+    pp.lineTo(bodyRect.bottomLeft()  += QPoint{-1, 1});
+    pp.lineTo(bodyRect.bottomLeft()  += QPoint{ 1, 1});
+    pp.lineTo(bodyRect.bottomRight() += QPoint{-1, 1});
+    pp.lineTo(bodyRect.bottomLeft()  += QPoint{ 1, 1});
+    int deltaToBottom{ height - bodyRect.bottom() };
+    pp.lineTo(bodyRect.bottomLeft()  += QPoint{ 1, deltaToBottom});
+    pp.lineTo(bodyRect.bottomRight() += QPoint{-1, deltaToBottom});
+    pp.lineTo(bodyRect.bottomRight() += QPoint{-1, 1});
+    pp.lineTo(bodyRect.bottomRight() += QPoint{ 1, 1});
+    pp.lineTo(bodyRect.bottomRight() += QPoint{ 1, 0});
+
+    pp.lineTo(bodyRect.bottomRight());
+    pp.lineTo(bodyRect.topRight());
+
+    pp.moveTo(QPoint{size.width()/2, partHair/3});
+    pp.lineTo(QPoint{size.width()/2+1, bodyRect.bottom()-3});
+    pp.lineTo(QPoint{size.width()/2-1, bodyRect.bottom()-3});
+    pp.lineTo(QPoint{size.width()/2, partHair/3});
+
+    return pp;
+}
+
+
+void ShipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget)
+{
+    // переопределён с целью добавления градиента
+    Q_UNUSED(widget)
+    Q_UNUSED(option)
+    painter->setPen(pen());
+    QLinearGradient gradient(0, 0, 0, size.height());
+    if (type == raw::Ship::Type::handler) {
+        gradient.setColorAt(0.0, QColor{0xf0, 0xf0, 0x40});
+        gradient.setColorAt(1.0, QColor{0xcf, 0x33, 0x00});
+    }
+    else {
+        gradient.setColorAt(0.0, QColor{0x40, 0x40, 0xf0});
+        gradient.setColorAt(1.0, QColor{0x22, 0xff, 0x22});
+    }
+    painter->setBrush(gradient);
+    painter->drawPath(path());
+
+    // выделение не поддерживаем, поэтому не будем что-то делать с этим
 }

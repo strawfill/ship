@@ -5,7 +5,5 @@
         <file>start.png</file>
         <file>stop.png</file>
         <file>SourceCodePro-Regular.ttf</file>
-        <file>handler.png</file>
-        <file>shooter.png</file>
     </qresource>
 </RCC>

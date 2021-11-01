@@ -1,15 +1,17 @@
 #ifndef SHIPGRAPHICSITEM_H
 #define SHIPGRAPHICSITEM_H
 
-#include <QGraphicsPixmapItem>
+#include <QGraphicsPathItem>
 #include "graphicsiteminterface.h"
 
 #include "prepareddata.h"
 
-class ShipGraphicsItem : public QGraphicsPixmapItem, public GraphicsItemInterface
+class ShipGraphicsItem : public QGraphicsPathItem, public GraphicsItemInterface
 {
 public:
-    ShipGraphicsItem(const QPixmap &pixmap, int aspeed, const prepared::Path &apath);
+    ShipGraphicsItem(raw::Ship::Type atype, int aspeed, const prepared::Path &apath);
+
+    void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget) override;
 
     void setHour(double hour) override;
 
@@ -19,8 +21,12 @@ private:
     void setShipPosition(double x1, double y1, double x2, double y2, int minH, int maxH, double curH);
     void setShipRotation(double rotation, double hourInThatTrac);
 
+    static QPainterPath handlerPath();
+    static QPainterPath shooterPath();
+
 private:
-    prepared::Path path;
+    prepared::Path mpath;
+    raw::Ship::Type type;
     QPoint offset;
     int speed{};
     mutable int rotationAtTracStart{};

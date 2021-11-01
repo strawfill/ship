@@ -227,12 +227,12 @@ void SimulationScene::initSceneItems()
         data->tracs.append(item);
     }
 
-    data->handler = new ShipGraphicsItem(QPixmap{":/handler.png"},
+    data->handler = new ShipGraphicsItem(raw::Ship::Type::handler,
                                          data->ds.handlerViaName(data->dd.handlerName).speed(),
                                          data->dd.pathHandler);
     scene->addItem(data->handler);
 
-    data->shooter = new ShipGraphicsItem(QPixmap{":/shooter.png"},
+    data->shooter = new ShipGraphicsItem(raw::Ship::Type::shooter,
                                          data->ds.shooterViaName(data->dd.shooterName).speed(),
                                          data->dd.pathShooter);
     scene->addItem(data->shooter);
