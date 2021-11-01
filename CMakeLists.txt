@@ -48,6 +48,8 @@ set(PATHWALK
     pathwalk/prepareddata.cpp
     pathwalk/patherrordetector.h
     pathwalk/patherrordetector.cpp
+    pathwalk/movestopathconverter.h
+    pathwalk/movestopathconverter.cpp
     )
 
 set(OTHER

@@ -13,6 +13,7 @@
 #include "simulationscene.h"
 #include "sourceerrordetector.h"
 #include "sourcefilereader.h"
+#include "movestopathconverter.h"
 
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
@@ -24,6 +25,8 @@ MainWindow::MainWindow(QWidget *parent)
     , pastAction(new QAction(this))
 {
     ui->setupUi(this);
+    // пока он не имеет смысла, и не понятно, будет ли иметь в будущем
+    ui->groupBox_optimisation->hide();
     // чтобы второй был минимального размера
     ui->splitter->setSizes({10000, 1});
 
@@ -180,6 +183,21 @@ void MainWindow::processFile(const QString &filename)
         if (DebugCatcher::instance()->warningsCount())
             return;
     }
+
+    MovesToPathConverter mc(sd);
+    mc.setShips(sd.handlers.at(0), sd.shooters.at(0));
+
+    auto trac{ sd.tracs.at(0) };
+
+    ShipMovesVector v1;
+    v1.append({trac.line(), false});
+    ShipMovesVector v2;
+    v2.append({trac.line(), false});
+    v2.append({trac.line(), false});
+
+    auto cals = mc.createPath(v2, v1);
+    qDebug().noquote() << "cost" << cals.cost << "PATH:\n" << cals.path;
+
 
     // и мы можем уже задать текущие данные для графической симуляции
     // не важно, есть ли path, мы просто отрисуем трассы тогда

@@ -130,6 +130,16 @@ Handler::Handler(const raw::Ship &ship, const raw::SensorMone &sensorMone, const
     Q_ASSERT(sensorMone.valid());
 }
 
+bool Handler::better(const Handler &other) const
+{
+    // если количество дачиков не совпадает, то напрямую судить о том, лучше судно или нет - нельзя
+    if (sensorCount != other.sensorCount)
+        return false;
+
+    bool worse{ spd < other.spd || dailyCost > other.dailyCost };
+    return !worse;
+}
+
 Shooter::Shooter(const raw::Ship &ship, const raw::ShipMone &shipMone)
     : nm(ship.name)
     , spd(ship.speed)
@@ -172,6 +182,61 @@ DataStatic::DataStatic(const raw::Data &data)
     // не все ошибки было удобно детектировать при raw структурах, поэтому здесь есть ещё детектор...
     // (да, это костыль, такую детекцию нужно по-хорошему вынести в другое место)
     detectErrors();
+}
+
+namespace {
+
+template<typename T>
+QVector<T> withoutCopies(const QVector<T> &source)
+{
+    QVector<T> result;
+    result.reserve(source.size());
+    // нет смысла оптимизировать, это короткий этап, работающий один раз
+    for (int i = 0; i < source.size(); ++i) {
+        bool has{ false };
+        for (int k = 0; k < result.size(); ++k) {
+            if (source.at(i) == result.at(k)) {
+                has = true;
+                break;
+            }
+        }
+        if (!has)
+            result.append(source.at(i));
+    }
+    return result;
+}
+
+template<typename T>
+void removeWorse(QVector<T> &source)
+{
+    for (int i = source.size()-1; i >= 0; --i) {
+        for (int k = source.size()-1; k >= 0; --k) {
+            if (k == i)
+                continue;
+
+            if (source.at(k).better(source.at(i))) {
+                source.remove(k);
+                break;
+            }
+        }
+    }
+}
+
+} // end anonymous namespace
+
+void DataStatic::removeDummyShips()
+{
+    QVector<Handler> newh{ withoutCopies(handlers) };
+    QVector<Shooter> news{ withoutCopies(shooters) };
+
+    removeWorse(newh);
+    removeWorse(news);
+
+    handlers = newh;
+    shooters = news;
+
+    // фактически можно сказать, что в этом месте объект теряет согласованность данных, ведь словари для быстрого
+    // поиска кораблей остались прежними. Но меня всё устраивает
 }
 
 void DataStatic::detectErrors()

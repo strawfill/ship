@@ -98,6 +98,13 @@ public:
     int sensors() const { return sensorCount; }
     qlonglong cost(int days) const { return days*dailyCost; }
 
+    // сделаем сравнение только по реально имеющим смысл параметрам, имя нас не интересует
+    bool operator==(const Handler &other) const
+    { return spd == other.spd && sensorCount == other.sensorCount && dailyCost == other.dailyCost; }
+
+    bool better(const Handler &other) const;
+
+
 private:
     QString nm;
     int spd{}, sensorCount{};
@@ -117,6 +124,13 @@ public:
     int speed() const { return spd; }
     qlonglong cost(int days) const { return days*dailyCost; }
 
+    // сделаем сравнение только по реально имеющим смысл параметрам, имя нас не интересует
+    bool operator==(const Shooter &other) const
+    { return spd == other.spd && dailyCost == other.dailyCost; }
+
+    bool better(const Shooter &other) const
+    { return !(spd < other.spd || dailyCost > other.dailyCost); }
+
 private:
     QString nm;
     int spd{};
@@ -133,6 +147,8 @@ struct DataStatic
     DataStatic() {  }
     DataStatic(const raw::Data &data);
 
+    // некоторыми кораблями вообще ничего не сделать (если датчиков меньше, чем нужно на любую из трасс),
+    // или они просто являются дублями - такое стоит убрать
     void removeDummyShips();
     void detectErrors();
 
