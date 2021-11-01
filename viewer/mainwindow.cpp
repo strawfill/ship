@@ -156,6 +156,8 @@ void MainWindow::processFile(const QString &filename)
 {
     Q_ASSERT(QFileInfo(filename).isFile());
 
+    ui->graphicsView->resetTransform();
+
     DebugCatcher::instance()->clearWaringsCount();
     ui->plainTextEdit->clear();
 
