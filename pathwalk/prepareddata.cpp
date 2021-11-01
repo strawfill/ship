@@ -244,12 +244,12 @@ void DataStatic::detectErrors()
     // поиск ошибок вида:
     //  какая-то трасса настолько большая, что среди обработчиков нет такого, который смог бы обойти её
     int maxTrac{ 0 };
-    for (const auto & trac : tracs) {
+    for (const auto & trac : qAsConst(tracs)) {
         if (trac.sensors() > maxTrac)
             maxTrac = trac.sensors();
     }
     int maxHandler{ 0 };
-    for (const auto & handler : handlers) {
+    for (const auto & handler : qAsConst(handlers)) {
         if (handler.sensors() > maxHandler)
             maxHandler = handler.sensors();
     }

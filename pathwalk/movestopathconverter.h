@@ -40,7 +40,8 @@ public:
         bool isValid() const { return cost > 0; }
     };
 
-    void setShips(const prepared::Handler &ship1, const prepared::Shooter &ship2) { handler = ship1; shooter = ship2; }
+    void setShips(const prepared::Handler &ship1, const prepared::Shooter &ship2){ handler = ship1; shooter = ship2; }
+    //PathAndCost createRawPath(const ShipMovesVector &handlerVec, const ShipMovesVector &shooterVec);
     PathAndCost createPath(const ShipMovesVector &handlerVec, const ShipMovesVector &shooterVec);
 
 private:

@@ -42,9 +42,6 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui->graphicsView->setScene(scene->getScene());
 
-
-    ui->graphicsView->setDragMode(QGraphicsView::ScrollHandDrag);
-
     new GraphicsViewZoomer(ui->graphicsView);
 
     addAction(pastAction);
@@ -129,6 +126,7 @@ bool MainWindow::hasGoodFormat(const QMimeData *data)
 void MainWindow::processMimeData(const QMimeData *data)
 {
     scene->clear();
+    ui->graphicsView->setDragMode(QGraphicsView::NoDrag);
 
     if (!data)
         return;
@@ -173,7 +171,7 @@ void MainWindow::processFile(const QString &filename)
     prepared::DataStatic sd(reader.dat());
     prepared::DataDynamic dd(reader.dat());
 
-    // в ds тоже несколько ошибок проверяется...
+    // в ds конструкторе тоже несколько ошибок проверяется...
     if (DebugCatcher::instance()->warningsCount())
         return;
 
@@ -193,15 +191,18 @@ void MainWindow::processFile(const QString &filename)
     v1.append({trac.line(), false});
     ShipMovesVector v2;
     v2.append({trac.line(), false});
-    v2.append({trac.line(), false});
+    v2.append({trac.line(), true});
 
     auto cals = mc.createPath(v2, v1);
-    qDebug().noquote() << "cost" << cals.cost << "PATH:\n" << cals.path;
+    qDebug().noquote().nospace() << "cost " << cals.cost << "\nPATH:\n" << cals.path;
 
 
     // и мы можем уже задать текущие данные для графической симуляции
     // не важно, есть ли path, мы просто отрисуем трассы тогда
     scene->setSources(sd, dd);
+
+    // разрешим перетягивание
+    ui->graphicsView->setDragMode(QGraphicsView::ScrollHandDrag);
 
     ui->plainTextEdit->appendPlainText("-- ошибок не обнаружено");
     if (dd.has) {

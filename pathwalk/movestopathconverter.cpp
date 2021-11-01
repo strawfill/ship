@@ -48,27 +48,33 @@ MovesToPathConverter::PathAndCost MovesToPathConverter::createPath(const ShipMov
         while (true) {
             if (hcur >= handlerVec.size())
                 break;
+            qDebug() << "hcur" << hcur;
             const auto input{ handlerVec.at(hcur) };
-            const auto trac{ tracMap.value(input.line) };
-            // сначала нужно добраться
-            if (hpos != input.first()) {
-                addh(prepared::sa_movement);
-                hpos = input.first();
-                QPoint delta{ hpos - input.first() };
-                int dt = qCeil(qSqrt(delta.x()*delta.x() + delta.y()*delta.y()) * hspd);
-                hhour = qMax(hhour, lineStateChangedMap.value(trac.line()));
-                hhour += trac.nearAvailable(hhour, qCeil(trac.dist() * hspd)) + dt;
-            }
             char & calls = lineStateMap[input.line];
             if (calls != 0 && calls != 2) {
+                qDebug() << "hcur cant";
                 // мы не можем обоработать эту трассу
                 // отдаём работу шутеру, может он разблокирует её
                 break;
             }
-            hasSomeActions = true;
+            const auto trac{ tracMap.value(input.line) };
+            // сначала нужно добраться
+            if (hpos != input.first()) {
+                addh(prepared::sa_movement);
+                QPoint delta{ hpos - input.first() };
+                int dt = qCeil(qSqrt(delta.x()*delta.x() + delta.y()*delta.y()) * hspd);
+                hpos = input.first();
+                hhour = trac.nearAvailable(hhour + dt, qCeil(trac.dist() * hspd));
+            }
+            int otherhour{ lineStateChangedMap.value(trac.line()) };
+            if (otherhour > hhour) {
+                addh(prepared::sa_waiting);
+                hhour = otherhour;
+            }
             addh(calls == 0 ? prepared::sa_layout : prepared::sa_collection);
             hpos = input.second();
             hhour += qCeil(trac.dist() * hspd);
+            hasSomeActions = true;
             ++calls;
             ++hcur;
             lineStateChangedMap[trac.line()] = hhour;
@@ -77,27 +83,33 @@ MovesToPathConverter::PathAndCost MovesToPathConverter::createPath(const ShipMov
         while (true) {
             if (scur >= shooterVec.size())
                 break;
+            qDebug() << "scur" << scur;
             const auto input{ shooterVec.at(scur) };
-            const auto trac{ tracMap.value(input.line) };
-            // сначала нужно добраться
-            if (spos != input.first()) {
-                adds(prepared::sa_movement);
-                spos = input.first();
-                QPoint delta{ spos - input.first() };
-                int dt = qCeil(qSqrt(delta.x()*delta.x() + delta.y()*delta.y()) * hspd);
-                shour = qMax(shour, lineStateChangedMap.value(trac.line()));
-                shour += trac.nearAvailable(shour, qCeil(trac.dist() * sspd)) + dt;
-            }
             char & calls = lineStateMap[input.line];
             if (calls != 1) {
+                qDebug() << "scur cant";
                 // мы не можем обоработать эту трассу
                 // отдаём работу укладчику, может он разблокирует её
                 break;
             }
-            hasSomeActions = true;
+            const auto trac{ tracMap.value(input.line) };
+            // сначала нужно добраться
+            if (spos != input.first()) {
+                adds(prepared::sa_movement);
+                QPoint delta{ spos - input.first() };
+                int dt = qCeil(qSqrt(delta.x()*delta.x() + delta.y()*delta.y()) * sspd);
+                spos = input.first();
+                shour = trac.nearAvailable(shour+dt, qCeil(trac.dist() * sspd));
+            }
+            int otherhour{ lineStateChangedMap.value(trac.line()) };
+            if (otherhour > shour) {
+                adds(prepared::sa_waiting);
+                shour = otherhour;
+            }
             adds(prepared::sa_shooting);
             spos = input.second();
             shour += qCeil(trac.dist() * sspd);
+            hasSomeActions = true;
             ++calls;
             ++scur;
             lineStateChangedMap[trac.line()] = shour;
@@ -117,15 +129,16 @@ MovesToPathConverter::PathAndCost MovesToPathConverter::createPath(const ShipMov
     // но ещё нужно добавить записи возвращения домой
     if (hpos != startPos) {
         addh(prepared::sa_movement);
-        hpos = startPos;
         QPoint delta{ hpos - startPos };
+        hpos = startPos;
         hhour += qCeil(qSqrt(delta.x()*delta.x() + delta.y()*delta.y()) * hspd);
     }
     addh(prepared::sa_waiting);
+
     if (spos != startPos) {
         adds(prepared::sa_movement);
-        spos = startPos;
         QPoint delta{ spos - startPos };
+        spos = startPos;
         shour += qCeil(qSqrt(delta.x()*delta.x() + delta.y()*delta.y()) * sspd);
     }
     adds(prepared::sa_waiting);
