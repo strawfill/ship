@@ -158,7 +158,7 @@ void PathErrorDetector::detectProcessingTracErrors() const
     // заполним для каждой трассы действия кораблей
     QMap<Line, QVector<QPair<PathDot, PathDot> > > map;
 
-    for (const auto & trac : sd->tracs)
+    for (const auto & trac : qAsConst(sd->tracs))
         map.insert(trac.line(), {});
 
     auto fillFrom = [&map, this](const QVector<PathDot> &pd) {
@@ -187,7 +187,7 @@ void PathErrorDetector::detectProcessingTracErrors() const
     fillFrom(dd->pathShooter);
 
 
-    for (const auto & trac : sd->tracs) {
+    for (const auto & trac : qAsConst(sd->tracs)) {
         const auto & line { trac.line() };
         const auto & v{ map.value(line) };
 
@@ -205,7 +205,7 @@ void PathErrorDetector::detectProcessingTracErrors() const
 
         if (!actions.contains(sa_layout) || !actions.contains(sa_shooting) || !actions.contains(sa_collection)) {
             QStringList acts;
-            for (const auto &a : actions)
+            for (const auto &a : qAsConst(actions))
                 acts << QString::number(a);
             qWarning() << "В" << formatPath << "для трассы ("
                        << trac.p1().x() << trac.p1().y() << trac.p2().x() << trac.p2().y()
