@@ -37,6 +37,8 @@ MovesToPathConverter::PathAndTime MovesToPathConverter::createPath(const ShipMov
     pat.handlerPath.reserve(handlerVec.size() * 3);
     pat.shooterPath.reserve(handlerVec.size() * 3);
     // удобные функции
+//#define addh(act) pat.handlerPath.append({hpos.x(), hpos.y(), hhour, act});
+//#define adds(act) pat.shooterPath.append({spos.x(), spos.y(), shour, act});
     auto addh = [this, &hpos, &hhour](int act) {
         pat.handlerPath.append({hpos.x(), hpos.y(), hhour, act});
     };
