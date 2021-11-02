@@ -10,8 +10,11 @@ AlgoBruteForce::AlgoBruteForce(const prepared::DataStatic ads)
     ds.removeDummyShips();
 }
 
+#define TTT 0
+
 prepared::DataDynamic AlgoBruteForce::find()
 {
+#if TTT
     {
         QElapsedTimer tm; tm.start();
         //test
@@ -21,11 +24,12 @@ prepared::DataDynamic AlgoBruteForce::find()
         hplaces.resize(size2);
         for (int i = 0; i < size2; ++i)
             hplaces.at(i) = i;
-        qlonglong test0{}, test1{}, test2{};
+        qlonglong test0{}, test01{0}, test1{}, test2{};
         do {
             ++test0;
             int to = 1 << size2;
             for (int p = 0; p < to; ++p) {
+                ++test01;
                 std::vector<int> splaces;
                 splaces.resize(size);
 
@@ -43,13 +47,17 @@ prepared::DataDynamic AlgoBruteForce::find()
         }
         while(std::next_permutation(hplaces.begin(), hplaces.end()));
         qDebug() << tm.elapsed() << "ms" << "perm" << test1 << "all" << test2;
-        qDebug() << "now wait" << test2 / 1000. / 610 << "s";
-        qDebug() << "lol. Only" << test0;
+        auto ws = test2 / 1000. / 980;
+        qDebug() << "now wait" << ws << "s" << "(" << ws / 60 << "h)";
+        qDebug() << "lol. Only" << test0 << "but goto" << test01;
     }
+#endif
 
     QElapsedTimer tm; tm.start();
-    //QElapsedTimer t1, t2, t3, t4, t5; t1.start(); t2.start(); t3.start(); t4.start(); t5.start();
+
+#if TTT
     qint64 d0{},d1{},d2{},d3{},d4{},d5{},dd1{},dd2{},dd3{},dd4{},dd5{};
+#endif
     int varvara{0};
     int time = INT_MAX;
     prepared::DataDynamic result;
@@ -63,7 +71,17 @@ prepared::DataDynamic AlgoBruteForce::find()
 
     MovesToPathConverter converter{ds};
 
+    std::vector<int> hplacesfixed;
+    hplacesfixed.resize(size2);
 
+    std::vector<int> splaces;
+    splaces.resize(size);
+
+    ShipMovesVector hmoves;
+    hmoves.resize(size2);
+
+    ShipMovesVector smoves;
+    smoves.resize(size);
 
     // выбор кораблей 1
     for (int hi = 0; hi < ds.handlers.size(); ++hi) {
@@ -72,48 +90,54 @@ prepared::DataDynamic AlgoBruteForce::find()
             converter.setShips(ds.handlers.at(hi), ds.shooters.at(si));
             do {
                 // конкретная комбинация выбора путей для раскладчика
-                std::vector<int> hplacesfixed;
-                hplacesfixed.resize(size2);
                 std::transform(hplaces.begin(), hplaces.end(), hplacesfixed.begin(), [&size](int v){ return v % size; });
+                for (int i = 0; i < size2; ++i) {
+                    hmoves[i] = ShipMove{short(hplacesfixed.at(i)), false};
+                }
                 // конкретный выбор с какой из двух сторон путей стартовать
                 int to = 1 << size2;
                 for (int p = 0; p < to; ++p) {
                     // здесь уже все варианты раскладчиков учитаны, теперь нужно добавить варианты шутеров
-                    ShipMovesVector hmoves;
-                    hmoves.reserve(size2);
                     for (int i = 0; i < size2; ++i) {
-                        hmoves.append(ShipMove{ds.tracs.at(hplacesfixed.at(i)).line(), bool(p & (1<<i))});
+                        hmoves[i].isP1Start = p & (1<<i);
                     }
-                    std::vector<int> splaces;
-                    splaces.resize(size);
 
                     for (int i = 0; i < size; ++i)
                         splaces.at(i) = i;
 
                     do {
                         // задано всё, кроме выбора направления
+                        for (int i = 0; i < size; ++i) {
+                            smoves[i] = ShipMove{short(splaces.at(i)), false};
+                        }
                         int to = 1 << size;
                         for (int p = 0; p < to; ++p) {
+#if TTT
                             d0 = tm.nsecsElapsed();
+#endif
                             // здесь уже вообще всё учитано
                             // но вложенность 4 цикла...
-                            ShipMovesVector smoves;
-                            smoves.reserve(size);
                             for (int i = 0; i < size; ++i) {
-                                smoves.append(ShipMove{ds.tracs.at(splaces.at(i)).line(), bool(p & (1<<i))});
+                                smoves[i].isP1Start = p & (1<<i);
                             }
+#if TTT
                             d1 = tm.nsecsElapsed() - d0;
+#endif
                             ++varvara;
                             auto temp{ converter.createPath(hmoves, smoves)};
+#if TTT
                             d2 = tm.nsecsElapsed() - d1;
+#endif
                             if (temp.isValid() && temp.time < time) {
                                 result = converter.createDD(temp);
                                 time = temp.time;
                             }
+#if TTT
                             d3 = tm.nsecsElapsed() - d2;
                             dd1 += d1;
                             dd2 += d2;
                             dd3 += d3;
+#endif
 
                         }
 
@@ -131,7 +155,9 @@ prepared::DataDynamic AlgoBruteForce::find()
     qDebug() << "time" << time;
     qDebug() << "cost" << prepared::totalCost(ds, result);
     qDebug() << "speed:" << double(varvara) / elaps;
+#if TTT
     qDebug() << "deltas" << dd1 / 1e6 / varvara << dd2 / 1e6 / varvara << dd3 / 1e6 / varvara
              << "other" << elaps - dd2 / 1e6 / varvara;
+#endif
     return result;
 }

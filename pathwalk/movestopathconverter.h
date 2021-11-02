@@ -8,11 +8,11 @@
 
 struct ShipMove
 {
-    prepared::Line line;
+    short tracNum{ 0 };
     bool isP1Start{ false };
 
-    QPoint first() const { return isP1Start ? line.p1() : line.p2(); }
-    QPoint second() const { return isP1Start ? line.p2() : line.p1(); }
+    QPoint first(const QVector<prepared::Trac> &tracs) const { return isP1Start ? tracs.at(tracNum).p1() : tracs.at(tracNum).p2(); }
+    QPoint second(const QVector<prepared::Trac> &tracs) const { return isP1Start ? tracs.at(tracNum).p2() : tracs.at(tracNum).p1(); }
 };
 
 using ShipMovesVector = QVector<ShipMove>;
@@ -47,24 +47,29 @@ public:
         bool isValid() const { return cost > 0; }
     };
 
-    void setShips(const prepared::Handler &ship1, const prepared::Shooter &ship2){ handler = ship1; shooter = ship2; }
+    void setShips(const prepared::Handler &ship1, const prepared::Shooter &ship2);
 
     PathAndTime createPath(const ShipMovesVector &handlerVec, const ShipMovesVector &shooterVec);
-    StringPathAndCost createQStringPath(const ShipMovesVector &handlerVec, const ShipMovesVector &shooterVec);
+    StringPathAndCost createQStringPath(const ShipMovesVector &handlerVec, const ShipMovesVector &shooterVec)
+    { return createQStringPath(createPath(handlerVec, shooterVec)); }
     StringPathAndCost createQStringPath(const PathAndTime &path);
-    prepared::DataDynamic createDD(const ShipMovesVector &handlerVec, const ShipMovesVector &shooterVec);
+    prepared::DataDynamic createDD(const ShipMovesVector &handlerVec, const ShipMovesVector &shooterVec)
+    { return createDD(createPath(handlerVec, shooterVec)); }
     prepared::DataDynamic createDD(const PathAndTime &path);
 
 private:
     void clear();
 
 private:
-    QMap<prepared::Line, prepared::Trac> tracMap;
+    QVector<char> lineState;
+    QVector<int> lineStateChanged;
+    double handlerInvSpeed{};
+    double shooterInvSpeed{};
+    PathAndTime pat;
+
     prepared::DataStatic ds;
     prepared::Shooter shooter;
     prepared::Handler handler;
-    QMap<prepared::Line, char> lineStateMap;
-    QMap<prepared::Line, int> lineStateChangedMap;
 };
 
 #endif // MOVESTOPATHCONVERTER_H
