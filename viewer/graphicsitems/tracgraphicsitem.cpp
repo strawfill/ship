@@ -29,29 +29,35 @@ void TracGraphicsItem::setHour(double hour)
 
 QPen TracGraphicsItem::penForState(TracState state, bool enabled)
 {
-    auto createpen = [](const QColor &c, Qt::PenStyle ps) {
+    auto createPen = [](const QColor &c, Qt::PenStyle ps) {
         return QPen{ c, 3, ps, Qt::RoundCap };
+    };
+    auto createErrorPen = []() {
+        return QPen{ QColor{0xff, 0x24, 0x00, 0xCC}, 6, Qt::DashLine, Qt::RoundCap };
     };
 
     switch (state) {
     case ts_after_start:
-        return enabled ? createpen(QColor{0x03, 0xAC, 0x13}, Qt::SolidLine) :
-                         createpen(QColor{0xff, 0x24, 0x00}, Qt::SolidLine);
+        return enabled ? createPen(QColor{0x03, 0xAC, 0x13}, Qt::SolidLine) :
+                         createPen(QColor{0xff, 0x24, 0x00}, Qt::SolidLine);
     case ts_layout:
-        return createpen(QColor{0x00, 0x99, 0xCC}, Qt::DotLine);
+        return enabled ? createPen(QColor{0x00, 0x99, 0xCC}, Qt::DotLine) :
+                         createErrorPen();
     case ts_after_layout:
-        return enabled ? createpen(QColor{0x00, 0x99, 0xCC, 0xA0}, Qt::DashLine) :
-                         createpen(QColor{0xff, 0x24, 0x00, 0xA0}, Qt::DashLine);
+        return enabled ? createPen(QColor{0x00, 0x99, 0xCC, 0xA0}, Qt::DashLine) :
+                         createPen(QColor{0xff, 0x24, 0x00, 0xA0}, Qt::DashLine);
     case ts_shooting:
-        return createpen(QColor{0xFF, 0x99, 0x33}, Qt::DotLine);
+        return enabled ? createPen(QColor{0xFF, 0x99, 0x33}, Qt::DotLine) :
+                         createErrorPen();
     case ts_after_shooting:
-        return enabled ? createpen(QColor{0xFF, 0x99, 0x33, 0xA0}, Qt::DashLine) :
-                         createpen(QColor{0xff, 0x24, 0x00, 0xA0}, Qt::DashLine);
+        return enabled ? createPen(QColor{0xFF, 0x99, 0x33, 0xA0}, Qt::DashLine) :
+                         createPen(QColor{0xff, 0x24, 0x00, 0xA0}, Qt::DashLine);
     case ts_collection:
-        return createpen(QColor{0x66, 0x00, 0x66}, Qt::DotLine);
+        return enabled ? createPen(QColor{0x66, 0x00, 0x66}, Qt::DotLine) :
+                         createErrorPen();
     case ts_after_collection:
-        return enabled ? createpen(QColor{0x03, 0xAC, 0x13, 0x20}, Qt::SolidLine) :
-                         createpen(QColor{0xff, 0x24, 0x00, 0x20}, Qt::SolidLine);
+        return enabled ? createPen(QColor{0x03, 0xAC, 0x13, 0x20}, Qt::SolidLine) :
+                         createPen(QColor{0xff, 0x24, 0x00, 0x20}, Qt::SolidLine);
     }
     return {};
 }
