@@ -124,7 +124,7 @@ MovesToPathConverter::PathAndTime MovesToPathConverter::createPath(const ShipMov
             hasSomeActions = true;
             ++calls;
             ++scur;
-            lineStateChanged[input.tracNum] = hhour;
+            lineStateChanged[input.tracNum] = shour;
         }
 
         if (Q_UNLIKELY(!hasSomeActions)) {
