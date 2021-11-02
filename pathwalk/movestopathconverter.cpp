@@ -15,6 +15,7 @@ MovesToPathConverter::MovesToPathConverter(const prepared::DataStatic &ads)
 
 MovesToPathConverter::PathAndCost MovesToPathConverter::createPath(const ShipMovesVector &handlerVec, const ShipMovesVector &shooterVec)
 {
+
     clear();
 
     constexpr QPoint startPos{0,0};
@@ -30,15 +31,15 @@ MovesToPathConverter::PathAndCost MovesToPathConverter::createPath(const ShipMov
     // число записей в пути
     int hcnt{0}, scnt{0};
     // сами записи
-    QString hpath, spath;
+    prepared::Path hpath, spath;
     // удобные функции
     auto addh = [&hpath, &hcnt, &hpos, &hhour](int act) {
         ++hcnt;
-        hpath += QString{"%1 %2 %3 %4\n"}.arg(hpos.x()).arg(hpos.y()).arg(hhour).arg(act);
+        hpath.append({hpos.x(), hpos.y(), hhour, act});
     };
     auto adds = [&spath, &scnt, &spos, &shour](int act) {
         ++scnt;
-        spath += QString{"%1 %2 %3 %4\n"}.arg(spos.x()).arg(spos.y()).arg(shour).arg(act);
+        spath.append({spos.x(), spos.y(), shour, act});
     };
 
     while (true) {
@@ -48,11 +49,9 @@ MovesToPathConverter::PathAndCost MovesToPathConverter::createPath(const ShipMov
         while (true) {
             if (hcur >= handlerVec.size())
                 break;
-            qDebug() << "hcur" << hcur;
             const auto input{ handlerVec.at(hcur) };
             char & calls = lineStateMap[input.line];
             if (calls != 0 && calls != 2) {
-                qDebug() << "hcur cant";
                 // мы не можем обоработать эту трассу
                 // отдаём работу шутеру, может он разблокирует её
                 break;
@@ -83,11 +82,9 @@ MovesToPathConverter::PathAndCost MovesToPathConverter::createPath(const ShipMov
         while (true) {
             if (scur >= shooterVec.size())
                 break;
-            qDebug() << "scur" << scur;
             const auto input{ shooterVec.at(scur) };
             char & calls = lineStateMap[input.line];
             if (calls != 1) {
-                qDebug() << "scur cant";
                 // мы не можем обоработать эту трассу
                 // отдаём работу укладчику, может он разблокирует её
                 break;
@@ -146,13 +143,47 @@ MovesToPathConverter::PathAndCost MovesToPathConverter::createPath(const ShipMov
 
     int maxH = qMax(hhour, shour);
     int days = qCeil(maxH / 24.);
+
     PathAndCost result;
-    auto & s{ result.path };
-    s += QString{"H %1 %2\n"}.arg(handler.name()).arg(hcnt);
-    s += hpath;
-    s += QString{"S %1 %2\n"}.arg(shooter.name()).arg(scnt);
-    s += spath;
+    result.handlerPath = hpath;
+    result.shooterPath = spath;
     result.cost = handler.cost(days) + shooter.cost(days);
+    return result;
+}
+
+MovesToPathConverter::StringPathAndCost MovesToPathConverter::createQStringPath(const ShipMovesVector &handlerVec, const ShipMovesVector &shooterVec)
+{
+    return createQStringPath(createPath(handlerVec, shooterVec));
+}
+
+MovesToPathConverter::StringPathAndCost MovesToPathConverter::createQStringPath(const PathAndCost &path)
+{
+    StringPathAndCost result;
+    auto & s{ result.path };
+    s.reserve(15*(path.handlerPath.size()+path.shooterPath.size()));
+    s += QString{"H %1 %2\n"}.arg(handler.name()).arg(path.handlerPath.size());
+    for (const auto & p : qAsConst(path.handlerPath))
+        s += QString{"%1 %2 %3 %4\n"}.arg(p.x).arg(p.y).arg(p.timeH).arg(p.activity);
+    s += QString{"S %1 %2\n"}.arg(shooter.name()).arg(path.shooterPath.size());
+    for (const auto & p : qAsConst(path.shooterPath))
+        s += QString{"%1 %2 %3 %4\n"}.arg(p.x).arg(p.y).arg(p.timeH).arg(p.activity);
+    result.cost = path.cost;
+    return result;
+}
+
+prepared::DataDynamic MovesToPathConverter::createDD(const ShipMovesVector &handlerVec, const ShipMovesVector &shooterVec)
+{
+    return createDD(createPath(handlerVec, shooterVec));
+}
+
+prepared::DataDynamic MovesToPathConverter::createDD(const PathAndCost &path)
+{
+    prepared::DataDynamic result;
+    result.handlerName = handler.name();
+    result.shooterName = shooter.name();
+    result.pathHandler = path.handlerPath;
+    result.pathShooter = path.shooterPath;
+    result.has = true;
     return result;
 }
 

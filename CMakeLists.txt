@@ -50,6 +50,8 @@ set(PATHWALK
     pathwalk/patherrordetector.cpp
     pathwalk/movestopathconverter.h
     pathwalk/movestopathconverter.cpp
+    pathwalk/algobruteforce.h
+    pathwalk/algobruteforce.cpp
     )
 
 set(OTHER

@@ -5,6 +5,7 @@
 #include <QSettings>
 #include <QTemporaryFile>
 
+#include "algobruteforce.h"
 #include "debugcatcher.h"
 #include "graphicsviewzoomer.h"
 #include "prepareddata.h"
@@ -168,7 +169,7 @@ void MainWindow::processFile(const QString &filename)
     if (DebugCatcher::instance()->warningsCount())
         return;
 
-    prepared::DataStatic sd(reader.dat());
+    prepared::DataStatic ds(reader.dat());
     prepared::DataDynamic dd(reader.dat());
 
     // в ds конструкторе тоже несколько ошибок проверяется...
@@ -176,40 +177,47 @@ void MainWindow::processFile(const QString &filename)
         return;
 
     if (dd.has) {
-        PathErrorDetector pathErrorDetector(sd, dd);
+        PathErrorDetector pathErrorDetector(ds, dd);
 
         if (DebugCatcher::instance()->warningsCount())
             return;
     }
-
-    MovesToPathConverter mc(sd);
-    mc.setShips(sd.handlers.at(0), sd.shooters.at(0));
-
-    auto trac{ sd.tracs.at(0) };
-
-    ShipMovesVector v1;
-    v1.append({trac.line(), false});
-    ShipMovesVector v2;
-    v2.append({trac.line(), false});
-    v2.append({trac.line(), true});
-
-    auto cals = mc.createPath(v2, v1);
-    qDebug().noquote().nospace() << "cost " << cals.cost << "\nPATH:\n" << cals.path;
-
-
-    // и мы можем уже задать текущие данные для графической симуляции
-    // не важно, есть ли path, мы просто отрисуем трассы тогда
-    scene->setSources(sd, dd);
-
     // разрешим перетягивание
     ui->graphicsView->setDragMode(QGraphicsView::ScrollHandDrag);
 
     ui->plainTextEdit->appendPlainText("-- ошибок не обнаружено");
     if (dd.has) {
         ui->plainTextEdit->appendPlainText("-- стоимость аренды по маршруту из исходных данных равна " +
-                                           QString::number(prepared::totalCost(sd, dd)));
+                                           QString::number(prepared::totalCost(ds, dd)));
+
+        // отрисуем пустые трассы
+        scene->setSources(ds, dd);
         return;
     }
+
+    //MovesToPathConverter mc(ds);
+    //mc.setShips(ds.handlers.at(0), ds.shooters.at(0));
+    //
+    //auto trac{ ds.tracs.at(0) };
+    //
+    //ShipMovesVector v1;
+    //v1.append({trac.line(), false});
+    //ShipMovesVector v2;
+    //v2.append({trac.line(), true});
+    //v2.append({trac.line(), false});
+    //
+    //auto cals = mc.createQStringPath(v2, v1);
+    //qDebug().noquote().nospace() << "cost " << cals.cost << "\nPATH:\n" << cals.path;
+    //dd = mc.createDD(v2, v1);
+
+    AlgoBruteForce algoBruteForce(ds);
+    dd = algoBruteForce.find();
+
+
+    scene->setSources(ds, dd);
+
+    ui->plainTextEdit->appendPlainText("-- стоимость аренды по созданному маршруту равна " +
+                                       QString::number(prepared::totalCost(ds, dd)));
 }
 
 void MainWindow::postFromClipboardRequested()

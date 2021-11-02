@@ -34,6 +34,13 @@ public:
     MovesToPathConverter(const prepared::DataStatic &ads);
 
     struct PathAndCost {
+        prepared::Path handlerPath;
+        prepared::Path shooterPath;
+        qlonglong cost{ -1 };
+
+        bool isValid() const { return cost > 0; }
+    };
+    struct StringPathAndCost {
         QString path;
         qlonglong cost{ -1 };
 
@@ -41,8 +48,12 @@ public:
     };
 
     void setShips(const prepared::Handler &ship1, const prepared::Shooter &ship2){ handler = ship1; shooter = ship2; }
-    //PathAndCost createRawPath(const ShipMovesVector &handlerVec, const ShipMovesVector &shooterVec);
+
     PathAndCost createPath(const ShipMovesVector &handlerVec, const ShipMovesVector &shooterVec);
+    StringPathAndCost createQStringPath(const ShipMovesVector &handlerVec, const ShipMovesVector &shooterVec);
+    StringPathAndCost createQStringPath(const PathAndCost &path);
+    prepared::DataDynamic createDD(const ShipMovesVector &handlerVec, const ShipMovesVector &shooterVec);
+    prepared::DataDynamic createDD(const PathAndCost &path);
 
 private:
     void clear();
