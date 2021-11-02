@@ -41,7 +41,16 @@ struct Line : QLine
     Line() {}
     Line(const QPoint &pt1, const QPoint &pt2) : QLine(pt1, pt2) { }
     Line(int x1, int y1, int x2, int y2) : QLine(x1, y1, x2, y2) { }
-    bool operator<(const Line &other) const;
+    inline bool operator<(const Line &other) const
+    {
+        return p1().x() < other.p1().x() || (
+                    p1().x() == other.p1().x() && (
+                        p1().y() < other.p1().y() || (
+                            p1().y() == other.p1().y() && (
+                                p2().x() < other.p2().x() || (
+                                    p2().x() == other.p2().x() && (
+                                        p2().y() < other.p2().y()))))));
+    }
 };
 
 class IceeArray

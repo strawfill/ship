@@ -4,22 +4,6 @@
 
 namespace prepared {
 
-bool Line::operator<(const Line &other) const
-{
-    // просто какая-то корректная реализация
-    auto asV = [](const Line &l) {
-        QVector<int> coords;
-        coords.reserve(4);
-        coords << l.p1().x();
-        coords << l.p1().y();
-        coords << l.p2().x();
-        coords << l.p2().y();
-        return coords;
-    };
-
-    return asV(*this) < asV(other);
-}
-
 IceeArray::IceeArray(const QVector<raw::Icee> &source)
 {
     Data temp;

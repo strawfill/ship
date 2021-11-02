@@ -21,8 +21,9 @@ prepared::DataDynamic AlgoBruteForce::find()
         hplaces.resize(size2);
         for (int i = 0; i < size2; ++i)
             hplaces.at(i) = i;
-        qlonglong test1{}, test2{};
+        qlonglong test0{}, test1{}, test2{};
         do {
+            ++test0;
             int to = 1 << size2;
             for (int p = 0; p < to; ++p) {
                 std::vector<int> splaces;
@@ -42,8 +43,10 @@ prepared::DataDynamic AlgoBruteForce::find()
         }
         while(std::next_permutation(hplaces.begin(), hplaces.end()));
         qDebug() << tm.elapsed() << "ms" << "perm" << test1 << "all" << test2;
-        qDebug() << "now wait" << test2 / 10000. << "s";
+        qDebug() << "now wait" << test2 / 1000. / 610 << "s";
+        qDebug() << "lol. Only" << test0;
     }
+
     QElapsedTimer tm; tm.start();
     //QElapsedTimer t1, t2, t3, t4, t5; t1.start(); t2.start(); t3.start(); t4.start(); t5.start();
     qint64 d0{},d1{},d2{},d3{},d4{},d5{},dd1{},dd2{},dd3{},dd4{},dd5{};

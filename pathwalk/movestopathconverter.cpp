@@ -5,8 +5,10 @@
 MovesToPathConverter::MovesToPathConverter(const prepared::DataStatic &ads)
     : ds(ads)
 {
-    const auto & tracs{ ads.tracs };
-    for (const auto & trac : tracs) {
+    const auto & adstracs{ ads.tracs };
+    mtracs.reserve(adstracs.size());
+    for (const auto & trac : adstracs) {
+        mtracs.append(trac);
         tracMap.insert(trac.line(), trac);
         lineStateMap.insert(trac.line(), 0);
         lineStateChangedMap.insert(trac.line(), 0);
