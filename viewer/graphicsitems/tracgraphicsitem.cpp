@@ -32,6 +32,8 @@ QPen TracGraphicsItem::penForState(TracState state, bool enabled)
     auto createPen = [](const QColor &c, Qt::PenStyle ps) {
         return QPen{ c, 3, ps, Qt::RoundCap };
     };
+    // ситуации, когда нужна данная кисть не должны возникать
+    // но так как из-за багов возникают, то пусть хотя бы это будет видно
     auto createErrorPen = []() {
         return QPen{ QColor{0xff, 0x24, 0x00, 0xCC}, 6, Qt::DashLine, Qt::RoundCap };
     };
