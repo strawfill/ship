@@ -13,7 +13,7 @@ MovesToPathConverter::MovesToPathConverter(const prepared::DataStatic &ads)
     }
 }
 
-MovesToPathConverter::PathAndCost MovesToPathConverter::createPath(const ShipMovesVector &handlerVec, const ShipMovesVector &shooterVec)
+MovesToPathConverter::PathAndTime MovesToPathConverter::createPath(const ShipMovesVector &handlerVec, const ShipMovesVector &shooterVec)
 {
 
     clear();
@@ -32,6 +32,8 @@ MovesToPathConverter::PathAndCost MovesToPathConverter::createPath(const ShipMov
     int hcnt{0}, scnt{0};
     // сами записи
     prepared::Path hpath, spath;
+    hpath.reserve(handlerVec.size() * 2);
+    spath.reserve(shooterVec.size() * 2);
     // удобные функции
     auto addh = [&hpath, &hcnt, &hpos, &hhour](int act) {
         ++hcnt;
@@ -140,14 +142,10 @@ MovesToPathConverter::PathAndCost MovesToPathConverter::createPath(const ShipMov
     }
     adds(prepared::sa_waiting);
 
-
-    int maxH = qMax(hhour, shour);
-    int days = qCeil(maxH / 24.);
-
-    PathAndCost result;
+    PathAndTime result;
     result.handlerPath = hpath;
     result.shooterPath = spath;
-    result.cost = handler.cost(days) + shooter.cost(days);
+    result.time = qMax(hhour, shour);
     return result;
 }
 
@@ -156,7 +154,7 @@ MovesToPathConverter::StringPathAndCost MovesToPathConverter::createQStringPath(
     return createQStringPath(createPath(handlerVec, shooterVec));
 }
 
-MovesToPathConverter::StringPathAndCost MovesToPathConverter::createQStringPath(const PathAndCost &path)
+MovesToPathConverter::StringPathAndCost MovesToPathConverter::createQStringPath(const PathAndTime &path)
 {
     StringPathAndCost result;
     auto & s{ result.path };
@@ -167,7 +165,7 @@ MovesToPathConverter::StringPathAndCost MovesToPathConverter::createQStringPath(
     s += QString{"S %1 %2\n"}.arg(shooter.name()).arg(path.shooterPath.size());
     for (const auto & p : qAsConst(path.shooterPath))
         s += QString{"%1 %2 %3 %4\n"}.arg(p.x).arg(p.y).arg(p.timeH).arg(p.activity);
-    result.cost = path.cost;
+    result.cost = path.time;
     return result;
 }
 
@@ -176,7 +174,7 @@ prepared::DataDynamic MovesToPathConverter::createDD(const ShipMovesVector &hand
     return createDD(createPath(handlerVec, shooterVec));
 }
 
-prepared::DataDynamic MovesToPathConverter::createDD(const PathAndCost &path)
+prepared::DataDynamic MovesToPathConverter::createDD(const PathAndTime &path)
 {
     prepared::DataDynamic result;
     result.handlerName = handler.name();

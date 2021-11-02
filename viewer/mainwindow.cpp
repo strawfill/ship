@@ -4,6 +4,7 @@
 #include <QMimeData>
 #include <QSettings>
 #include <QTemporaryFile>
+#include <QDir> // remove me
 
 #include "algobruteforce.h"
 #include "debugcatcher.h"
@@ -50,6 +51,10 @@ MainWindow::MainWindow(QWidget *parent)
     connect(pastAction, &QAction::triggered, this, &MainWindow::postFromClipboardRequested);
 
     loadSettings();
+
+    QMimeData md;
+    md.setUrls(QList<QUrl>() << QUrl{"file:///" + QDir::currentPath() + "/../input/test_brute_force/simple/test.txt"});
+    processMimeData(&md);
 }
 
 MainWindow::~MainWindow()

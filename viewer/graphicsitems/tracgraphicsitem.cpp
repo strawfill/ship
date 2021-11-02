@@ -40,11 +40,13 @@ QPen TracGraphicsItem::penForState(TracState state, bool enabled)
     case ts_layout:
         return createpen(QColor{0x00, 0x99, 0xCC}, Qt::DotLine);
     case ts_after_layout:
-        return createpen(QColor{0x00, 0x99, 0xCC, 0xA0}, Qt::DashLine);
+        return enabled ? createpen(QColor{0x00, 0x99, 0xCC, 0xA0}, Qt::DashLine) :
+                         createpen(QColor{0xff, 0x24, 0x00, 0xA0}, Qt::DashLine);
     case ts_shooting:
         return createpen(QColor{0xFF, 0x99, 0x33}, Qt::DotLine);
     case ts_after_shooting:
-        return createpen(QColor{0xFF, 0x99, 0x33, 0xA0}, Qt::DashLine);
+        return enabled ? createpen(QColor{0xFF, 0x99, 0x33, 0xA0}, Qt::DashLine) :
+                         createpen(QColor{0xff, 0x24, 0x00, 0xA0}, Qt::DashLine);
     case ts_collection:
         return createpen(QColor{0x66, 0x00, 0x66}, Qt::DotLine);
     case ts_after_collection:

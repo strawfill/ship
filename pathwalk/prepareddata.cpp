@@ -215,7 +215,7 @@ void removeWorse(QVector<T> &source)
                 continue;
 
             if (source.at(k).better(source.at(i))) {
-                source.remove(k);
+                source.remove(i);
                 break;
             }
         }
