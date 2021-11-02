@@ -24,7 +24,6 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
     , scene(new SimulationScene(this))
-    , pastAction(new QAction(this))
 {
     ui->setupUi(this);
     // пока он не имеет смысла, и не понятно, будет ли иметь в будущем
@@ -34,8 +33,9 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(DebugCatcher::instance(), &DebugCatcher::messageRecieved, ui->plainTextEdit, &QPlainTextEdit::appendPlainText);
 
-    connect(ui->tb_start, &QToolButton::clicked, scene, &SimulationScene::startSimulation);
-    connect(ui->tb_pause, &QToolButton::clicked, scene, &SimulationScene::pauseSimulation);
+    connect(ui->tb_startpause, &QToolButton::clicked, scene, &SimulationScene::startPauseSimulation);
+    connect(scene, &SimulationScene::startPauseChanged, this, &MainWindow::setStartPauseButtonPixmap);
+    //connect(ui->tb_pause, &QToolButton::clicked, scene, &SimulationScene::pauseSimulation);
     connect(ui->tb_stop, &QToolButton::clicked, scene, &SimulationScene::stopSimulation);
     connect(ui->doubleSpinBox_speed, QOverload<double>::of(&QDoubleSpinBox::valueChanged), scene, &SimulationScene::setSimulationSpeed);
     scene->setSimulationSpeed(ui->doubleSpinBox_speed->value());
@@ -46,15 +46,41 @@ MainWindow::MainWindow(QWidget *parent)
 
     new GraphicsViewZoomer(ui->graphicsView);
 
-    addAction(pastAction);
-    pastAction->setShortcut(QKeySequence::Paste);
-    connect(pastAction, &QAction::triggered, this, &MainWindow::postFromClipboardRequested);
-
     loadSettings();
+    setStartPauseButtonPixmap(false);
+
+    initActions();
 
     QMimeData md;
     md.setUrls(QList<QUrl>() << QUrl{"file:///" + QDir::currentPath() + "/../input/test_brute_force/simple/test.txt"});
     processMimeData(&md);
+}
+
+void MainWindow::initActions()
+{
+    // добавим горячие клавиши для удобства
+
+    auto paste{ new QAction(this) };
+    addAction(paste);
+    paste->setShortcut(QKeySequence::Paste);
+    connect(paste, &QAction::triggered, this, &MainWindow::postFromClipboardRequested);
+
+    const QVector<QKeySequence> ks {
+        QKeySequence{Qt::Key_R},
+        QKeySequence{Qt::Key_Space},
+        QKeySequence{Qt::CTRL + Qt::Key_Space}
+    };
+    for (const auto & key : ks) {
+        auto startPause{ new QAction(this) };
+        startPause->setShortcut(key);
+        connect(startPause, &QAction::triggered, scene, &SimulationScene::startPauseSimulation);
+        addAction(startPause);
+    }
+
+    auto stop{ new QAction(this) };
+    stop->setShortcut(QKeySequence{Qt::CTRL + Qt::Key_R});
+    connect(stop, &QAction::triggered, scene, &SimulationScene::stopSimulation);
+    addAction(stop);
 }
 
 MainWindow::~MainWindow()
@@ -94,6 +120,18 @@ void MainWindow::saveSettings()
     s.beginGroup("simulation");
     s.setValue("speed", ui->doubleSpinBox_speed->value());
     s.endGroup();
+}
+
+void MainWindow::setStartPauseButtonPixmap(bool isStarted)
+{
+    if (isStarted) {
+        ui->tb_startpause->setIcon(QIcon(":/pause.png"));
+        ui->tb_startpause->setToolTip("Поставить на паузу\nR или [Ctrl+]Space");
+    }
+    else {
+        ui->tb_startpause->setIcon(QIcon(":/start.png"));
+        ui->tb_startpause->setToolTip("Запустить симуляцию\nR или [Ctrl+]Space");
+    }
 }
 
 void MainWindow::dragEnterEvent(QDragEnterEvent *event)
@@ -199,21 +237,6 @@ void MainWindow::processFile(const QString &filename)
         scene->setSources(ds, dd);
         return;
     }
-
-    //MovesToPathConverter mc(ds);
-    //mc.setShips(ds.handlers.at(0), ds.shooters.at(0));
-    //
-    //auto trac{ ds.tracs.at(0) };
-    //
-    //ShipMovesVector v1;
-    //v1.append({trac.line(), false});
-    //ShipMovesVector v2;
-    //v2.append({trac.line(), true});
-    //v2.append({trac.line(), false});
-    //
-    //auto cals = mc.createQStringPath(v2, v1);
-    //qDebug().noquote().nospace() << "cost " << cals.cost << "\nPATH:\n" << cals.path;
-    //dd = mc.createDD(v2, v1);
 
     AlgoBruteForce algoBruteForce(ds);
     dd = algoBruteForce.find();

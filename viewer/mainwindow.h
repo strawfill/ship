@@ -9,7 +9,6 @@ QT_END_NAMESPACE
 
 class QMimeData;
 class SimulationScene;
-class QAction;
 
 class MainWindow : public QMainWindow
 {
@@ -33,9 +32,13 @@ private:
     void loadSettings();
     void saveSettings();
 
+    void initActions();
+
+private slots:
+    void setStartPauseButtonPixmap(bool isStarted);
+
 private:
     Ui::MainWindow *ui;
     SimulationScene *scene{ nullptr };
-    QAction *pastAction{ nullptr };
 };
 #endif // MAINWINDOW_H

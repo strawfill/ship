@@ -31,10 +31,13 @@ public:
 
 signals:
     void simulationTimeChanged(const QString &hour);
+    void startPauseChanged(bool isStartNow);
 
 public slots:
     void startSimulation();
     void pauseSimulation();
+    // в зависимости от текущего
+    void startPauseSimulation();
     void stopSimulation();
     void setSimulationSpeed(double hoursInSec);
 

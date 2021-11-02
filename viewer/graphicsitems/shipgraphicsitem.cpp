@@ -154,7 +154,6 @@ void ShipGraphicsItem::setShipRotation(double rotation, double hourInThatTrac)
         if (delta > 180)
             delta -= 360;
 
-        // по часовой крутится, всё хорошо
         double resrot{ rotationAtTracStart + delta * qBound(0., hourInThatTrac, 1.) };
         setRotation(qRound(resrot));
 

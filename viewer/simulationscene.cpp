@@ -84,6 +84,7 @@ void SimulationScene::startSimulation()
     eltimer.restart();
 
     tickTimer->start();
+    emit startPauseChanged(tickTimer->isActive());
 }
 
 void SimulationScene::pauseSimulation()
@@ -92,6 +93,15 @@ void SimulationScene::pauseSimulation()
     hourBase = hour;
 
     tickTimer->stop();
+    emit startPauseChanged(tickTimer->isActive());
+}
+
+void SimulationScene::startPauseSimulation()
+{
+    if (tickTimer->isActive())
+        pauseSimulation();
+    else
+        startSimulation();
 }
 
 void SimulationScene::stopSimulation()
