@@ -53,7 +53,7 @@ MovesToPathConverter::PathAndTime MovesToPathConverter::createPath(const ShipMov
         bool hasSomeActions{ false };
         // сначала пытаемся сделать всё, что может обработчик без помощи шутера, потом наоборот. Так и чередуем
         while (true) {
-            if (Q_UNLIKELY(hcur >= handlerVec.size()))
+            if (hcur >= handlerVec.size())
                 break;
             const auto input{ handlerVec.at(hcur) };
             char & calls = lineState[input.tracNum];
@@ -64,7 +64,7 @@ MovesToPathConverter::PathAndTime MovesToPathConverter::createPath(const ShipMov
             }
             const auto trac{ ds.tracs.at(input.tracNum) };
             // сначала нужно добраться
-            if (Q_LIKELY(hpos != input.first(ds.tracs))) {
+            if (hpos != input.first(ds.tracs)) {
                 addh(prepared::sa_movement);
                 QPoint delta{ hpos - input.first(ds.tracs) };
                 hpos = input.first(ds.tracs);
@@ -73,13 +73,13 @@ MovesToPathConverter::PathAndTime MovesToPathConverter::createPath(const ShipMov
             // теперь нужно подождать, когда отработает другое судно и/или откроется трасса
             int t1{ qMax(hhour, lineStateChanged.at(input.tracNum)) };
             int t2{ qMax(t1, trac.nearAvailable(t1, qCeil(trac.dist() * handlerInvSpeed))) };
-            if (Q_UNLIKELY(t2 > hhour)) {
+            if (t2 > hhour) {
                 addh(prepared::sa_waiting);
                 hhour = t2;
             }
             if (calls == 0) {
                 sensors -= trac.sensors();
-                if (Q_UNLIKELY(sensors < 0)) {
+                if (sensors < 0) {
                     // был задан некорректный путь
                     return {};
                 }
@@ -98,7 +98,7 @@ MovesToPathConverter::PathAndTime MovesToPathConverter::createPath(const ShipMov
         }
 
         while (true) {
-            if (Q_UNLIKELY(scur >= shooterVec.size()))
+            if (scur >= shooterVec.size())
                 break;
             const auto input{ shooterVec.at(scur) };
             char & calls = lineState[input.tracNum];
@@ -109,7 +109,7 @@ MovesToPathConverter::PathAndTime MovesToPathConverter::createPath(const ShipMov
             }
             const auto trac{ ds.tracs.at(input.tracNum) };
             // сначала нужно добраться
-            if (Q_LIKELY(spos != input.first(ds.tracs))) {
+            if (spos != input.first(ds.tracs)) {
                 adds(prepared::sa_movement);
                 QPoint delta{ spos - input.first(ds.tracs) };
                 spos = input.first(ds.tracs);
@@ -118,7 +118,7 @@ MovesToPathConverter::PathAndTime MovesToPathConverter::createPath(const ShipMov
             // теперь нужно подождать, когда отработает другое судно и/или откроется трасса
             int t1{ qMax(shour, lineStateChanged.at(input.tracNum)) };
             int t2{ qMax(t1, trac.nearAvailable(t1, qCeil(trac.dist() * shooterInvSpeed))) };
-            if (Q_UNLIKELY(t2 > shour)) {
+            if (t2 > shour) {
                 adds(prepared::sa_waiting);
                 shour = t2;
             }
@@ -131,7 +131,7 @@ MovesToPathConverter::PathAndTime MovesToPathConverter::createPath(const ShipMov
             lineStateChanged[input.tracNum] = shour;
         }
 
-        if (Q_UNLIKELY(!hasSomeActions)) {
+        if (!hasSomeActions) {
             // проверим, почему мы ничего не делали
             if (scur >= shooterVec.size() && hcur >= handlerVec.size()) {
                 // всё хорошо, можно выйти из цикла и продолжить обработку

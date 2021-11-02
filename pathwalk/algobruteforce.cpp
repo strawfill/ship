@@ -10,7 +10,7 @@ AlgoBruteForce::AlgoBruteForce(const prepared::DataStatic ads)
     ds.removeDummyShips();
 }
 
-#define TTT 1
+#define TTT 0
 
 prepared::DataDynamic AlgoBruteForce::find()
 {
