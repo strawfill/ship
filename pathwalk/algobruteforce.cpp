@@ -10,7 +10,7 @@ AlgoBruteForce::AlgoBruteForce(const prepared::DataStatic ads)
     ds.removeDummyShips();
 }
 
-#define TTT 0
+#define TTT 1
 
 prepared::DataDynamic AlgoBruteForce::find()
 {
@@ -23,7 +23,7 @@ prepared::DataDynamic AlgoBruteForce::find()
         std::vector<int> hplaces;
         hplaces.resize(size2);
         for (int i = 0; i < size2; ++i)
-            hplaces.at(i) = i;
+            hplaces.at(i) = i/2;
         qlonglong test0{}, test01{0}, test1{}, test2{};
         do {
             ++test0;
@@ -47,8 +47,8 @@ prepared::DataDynamic AlgoBruteForce::find()
         }
         while(std::next_permutation(hplaces.begin(), hplaces.end()));
         qDebug() << tm.elapsed() << "ms" << "perm" << test1 << "all" << test2;
-        auto ws = test2 / 1000. / 980;
-        qDebug() << "now wait" << ws << "s" << "(" << ws / 60 << "h)";
+        auto ws = test2 / 1000. / 2000;
+        qDebug() << "now wait" << ws << "s" << "(" << ws / 60 << "m)";
         qDebug() << "lol. Only" << test0 << "but goto" << test01;
     }
 #endif
@@ -64,15 +64,11 @@ prepared::DataDynamic AlgoBruteForce::find()
 
     int size{ ds.tracs.size() };
     int size2{ 2*size };
-    std::vector<int> hplaces;
-    hplaces.resize(size2);
-    for (int i = 0; i < size2; ++i)
-        hplaces.at(i) = i;
 
     MovesToPathConverter converter{ds};
 
-    std::vector<int> hplacesfixed;
-    hplacesfixed.resize(size2);
+    std::vector<int> hplaces;
+    hplaces.resize(size2);
 
     std::vector<int> splaces;
     splaces.resize(size);
@@ -88,11 +84,11 @@ prepared::DataDynamic AlgoBruteForce::find()
         // выбор кораблей 2
         for (int si = 0; si < ds.shooters.size(); ++si) {
             converter.setShips(ds.handlers.at(hi), ds.shooters.at(si));
+            for (int i = 0; i < size2; ++i)
+                hplaces.at(i) = i/2;
             do {
-                // конкретная комбинация выбора путей для раскладчика
-                std::transform(hplaces.begin(), hplaces.end(), hplacesfixed.begin(), [&size](int v){ return v % size; });
                 for (int i = 0; i < size2; ++i) {
-                    hmoves[i] = ShipMove{short(hplacesfixed.at(i)), false};
+                    hmoves[i] = ShipMove{short(hplaces.at(i)), false};
                 }
                 // конкретный выбор с какой из двух сторон путей стартовать
                 int to = 1 << size2;
