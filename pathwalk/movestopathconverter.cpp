@@ -65,14 +65,15 @@ MovesToPathConverter::PathAndTime MovesToPathConverter::createPath(const ShipMov
             if (Q_LIKELY(hpos != input.first(ds.tracs))) {
                 addh(prepared::sa_movement);
                 QPoint delta{ hpos - input.first(ds.tracs) };
-                int dt = qCeil(qSqrt(delta.x()*delta.x() + delta.y()*delta.y()) * handlerInvSpeed);
                 hpos = input.first(ds.tracs);
-                hhour = trac.nearAvailable(hhour + dt, qCeil(trac.dist() * handlerInvSpeed));
+                hhour += qCeil(qSqrt(delta.x()*delta.x() + delta.y()*delta.y()) * handlerInvSpeed);
             }
-            int otherhour{ lineStateChanged.at(input.tracNum) };
-            if (Q_UNLIKELY(otherhour > hhour)) {
+            // теперь нужно подождать, когда отработает другое судно и/или откроется трасса
+            int t1{ qMax(hhour, lineStateChanged.at(input.tracNum)) };
+            int t2{ qMax(t1, trac.nearAvailable(t1, qCeil(trac.dist() * handlerInvSpeed))) };
+            if (Q_UNLIKELY(t2 > hhour)) {
                 addh(prepared::sa_waiting);
-                hhour = otherhour;
+                hhour = t2;
             }
             if (calls == 0) {
                 sensors -= trac.sensors();
@@ -109,14 +110,15 @@ MovesToPathConverter::PathAndTime MovesToPathConverter::createPath(const ShipMov
             if (Q_LIKELY(spos != input.first(ds.tracs))) {
                 adds(prepared::sa_movement);
                 QPoint delta{ spos - input.first(ds.tracs) };
-                int dt = qCeil(qSqrt(delta.x()*delta.x() + delta.y()*delta.y()) * shooterInvSpeed);
                 spos = input.first(ds.tracs);
-                shour = trac.nearAvailable(shour+dt, qCeil(trac.dist() * shooterInvSpeed));
+                shour += qCeil(qSqrt(delta.x()*delta.x() + delta.y()*delta.y()) * shooterInvSpeed);
             }
-            int otherhour{ lineStateChanged.at(input.tracNum) };
-            if (Q_UNLIKELY(otherhour > shour)) {
+            // теперь нужно подождать, когда отработает другое судно и/или откроется трасса
+            int t1{ qMax(shour, lineStateChanged.at(input.tracNum)) };
+            int t2{ qMax(t1, trac.nearAvailable(t1, qCeil(trac.dist() * shooterInvSpeed))) };
+            if (Q_UNLIKELY(t2 > shour)) {
                 adds(prepared::sa_waiting);
-                shour = otherhour;
+                shour = t2;
             }
             adds(prepared::sa_shooting);
             spos = input.second(ds.tracs);
