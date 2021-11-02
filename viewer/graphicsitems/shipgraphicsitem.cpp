@@ -123,11 +123,16 @@ void ShipGraphicsItem::setShipPosition(double x1, double y1, double x2, double y
 
     // а теперь хотелось бы, что бы корабль мог нормально крутиться
 
-    setShipRotation(std::atan2(y1-y2, x2-x1) * 180 / M_PI, curH - minH);
+    setShipRotation(-std::atan2(y2-y1, x2-x1) * 180 / M_PI, curH - minH);
+    //qDebug() << "p" << y1 << y2 << x1 << x2 << (-std::atan2(y2-y1, x2-x1) * 180 / M_PI);
 }
 
 void ShipGraphicsItem::setShipRotation(double rotation, double hourInThatTrac)
 {
+    // реализация такая, что в течение первого часа корабль полностью плавно повернётся
+    // на новое направление
+
+    // какая-то фигня, подбором поставлена
     rotation += 90;
 
     int inewrot{ int(rotation) };
@@ -142,29 +147,17 @@ void ShipGraphicsItem::setShipRotation(double rotation, double hourInThatTrac)
             return;
         }
 
-        int delta{ inewrot - rotationAtTracStart };
-        if (qAbs(delta) < 180) {
-            // по часовой крутится, всё хорошо
-            double resrot{ rotationAtTracStart + delta * qBound(0., hourInThatTrac, 1.) };
-            setRotation(qRound(resrot));
-        }
-        else {
-            // методом подбора вся реализация функции и построена
-            // не до конца понимаю, почему именно такие числа нужно вставлять
-            delta = delta - 360;
-            double resrot{ rotationAtTracStart + delta * qBound(0., hourInThatTrac, 1.) };
-            setRotation(qRound(resrot));
-        }
+        int delta{ (inewrot - rotationAtTracStart) % 360 };
+        // и теперь 2 небольшие правки, чтобы крутилось по минимальному повороту
+        if (delta < -180)
+            delta += 360;
+        if (delta > 180)
+            delta -= 360;
 
-        //int maxdelta = 7;
-        //int fulldelta = icurrot - ibefrot;
-        //if (qAbs(fulldelta) > 180)
-        //    fulldelta = -fulldelta;
-        //int delta = qBound(-maxdelta, fulldelta, maxdelta);
-        //
-        //int result = (icurrot + delta) % 360;
-        //
-        //setRotation(result);
+        // по часовой крутится, всё хорошо
+        double resrot{ rotationAtTracStart + delta * qBound(0., hourInThatTrac, 1.) };
+        setRotation(qRound(resrot));
+
         update();
     }
 }
