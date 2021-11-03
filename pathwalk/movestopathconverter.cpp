@@ -49,44 +49,6 @@ void MovesToPathConverter::setShips(const prepared::Handler &ship1, const prepar
     shooterInvSpeed2 = shooterInvSpeed*shooterInvSpeed;
 }
 
-namespace {
-
-int32_t isqrt(double d) {
-    // далее алгоритм из https://en.wikipedia.org/wiki/Methods_of_computing_square_roots
-    // который считает корень из целого числа (с округлением вниз)
-    int32_t num = int(d);
-    int32_t res = 0;
-    int32_t bit = 1 << 30; // The second-to-top bit is set.
-                           // Same as ((unsigned) INT32_MAX + 1) / 2.
-
-    // "bit" starts at the highest power of four <= the argument.
-    while (bit > num)
-        bit >>= 2;
-
-    while (bit != 0) {
-        if (num >= res + bit) {
-            num -= res + bit;
-            res = (res >> 1) + bit;
-        } else
-            res >>= 1;
-        bit >>= 2;
-    }
-
-    // но нам нужно, чтобы считало для double, да ещё и с округлением вверх, поэтому
-    // прибавим единицу, если необходимо
-
-    // случаи:
-    // 6*6 < 35.99999 - оставим так, 6 подходит
-    // 6*6 < 36.00000 - оставим так, 6 подходит
-    // 6*6 < 36.00001 - прибавим единицу
-    if (res*res < d)
-        ++res;
-
-    return res;
-}
-
-}
-
 MovesToPathConverter::PathAndTime MovesToPathConverter::createPath(const ShipMovesVector &handlerVec, const ShipMovesVector &shooterVec)
 {
     clear();
@@ -236,10 +198,12 @@ MovesToPathConverter::PathAndTime MovesToPathConverter::createPath(const ShipMov
 
 #define YT 0
 
+
 int MovesToPathConverter::calculateHours(const ShipMovesVector &handlerVec, const ShipMovesVector &shooterVec)
 {
     static std::vector<char> lineState;
     static std::vector<int> lineStateChanged;
+
     if (lineState.size() != ds.tracs.size()) {
         lineState.resize(ds.tracs.size(), 0);
         lineStateChanged.resize(ds.tracs.size(), 0);
@@ -292,11 +256,15 @@ int MovesToPathConverter::calculateHours(const ShipMovesVector &handlerVec, cons
             hhour += qCeil(trac.dist() * handlerInvSpeed);
             hasSomeActions = true;
 
-            // если число вызовов 2, то нужно обнулить. Иначе задать 1
-            calls = !(calls >> 1);
-
             ++hcur;
             lineStateChanged[input.tracNum] = hhour;
+
+            if (calls == 2) {
+                calls = 0;
+                lineStateChanged[input.tracNum] = 0;
+            }
+            else
+                ++calls;
         }
 
         while (true) {

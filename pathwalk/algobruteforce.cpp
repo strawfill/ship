@@ -149,7 +149,7 @@ prepared::DataDynamic AlgoBruteForce::find()
                             d1 = tm.nsecsElapsed() - d0;
 #endif
                             ++varvara;
-#if 0
+#if 1
                             int hours{ converter.calculateHours(hmoves, smoves) };
 #else
                             auto temp{ converter.createPath(hmoves, smoves)};
