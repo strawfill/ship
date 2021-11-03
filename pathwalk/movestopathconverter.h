@@ -24,9 +24,10 @@ using ShipMovesVector = QVector<ShipMove>;
  * Исходные данные ShipMovesVector содержат только выбор дальнейних точек судов, без привязки ко времени
  * Данный класс конвертирует подобные записи в реальный Path, рассчитывая минимальное время
  *
- * Стоит отметить:
- *   от handler ожидается, что каждый путь будет указан 2 раза, а число датчиков на корабле не будет отрицательным
+ * О calculateHours и createPath стоит отметить:
+ *   от handler ожидается, что каждый путь будет указан 2 раза
  *   от shooter ожидается, что каждый путь будет указан 1 раз
+ *   не проверяется отрицательное число датчиков на судне, нужно вызвать метод handlerCanPassIt
  */
 class MovesToPathConverter
 {
@@ -63,15 +64,10 @@ public:
     prepared::DataDynamic createDD(const PathAndTime &path);
 
 private:
-    void clear();
-
-private:
-    QVector<char> lineState;
-    QVector<int> lineStateChanged;
+    std::vector<char> lineState;
+    std::vector<int>lineStateChanged;
     double handlerInvSpeed{};
     double shooterInvSpeed{};
-    double handlerInvSpeed2{};
-    double shooterInvSpeed2{};
     PathAndTime pat;
 
     prepared::DataStatic ds;

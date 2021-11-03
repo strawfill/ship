@@ -155,6 +155,7 @@ prepared::DataDynamic AlgoBruteForce::find()
                             auto temp{ converter.createPath(hmoves, smoves)};
                             int hours = temp.time;
 #endif
+
 #if TTT
                             d2 = tm.nsecsElapsed() - d1;
 #endif

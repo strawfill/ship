@@ -1,16 +1,22 @@
-#include "movestopathconverter.h"
+﻿#include "movestopathconverter.h"
 
 #include <QtMath>
 
 MovesToPathConverter::MovesToPathConverter(const prepared::DataStatic &ads)
     : ds(ads)
 {
-    const auto & trs{ ads.tracs };
-    lineState.fill(0, trs.size());
-    lineStateChanged.fill(0, trs.size());
+    lineState.resize(ads.tracs.size(), 0);
+    lineStateChanged.resize(ads.tracs.size(), 0);
 }
 
+void MovesToPathConverter::setShips(const prepared::Handler &ship1, const prepared::Shooter &ship2)
+{
+    handler = ship1;
+    shooter = ship2;
 
+    handlerInvSpeed = 1. / handler.speed();
+    shooterInvSpeed = 1. / shooter.speed();
+}
 
 bool MovesToPathConverter::handlerCanPassIt(const std::vector<int> handlerVec) const
 {
@@ -38,277 +44,107 @@ bool MovesToPathConverter::handlerCanPassIt(const std::vector<int> handlerVec) c
     return true;
 }
 
-void MovesToPathConverter::setShips(const prepared::Handler &ship1, const prepared::Shooter &ship2)
+namespace {
+
+struct ProcessTimeData
 {
-    handler = ship1;
-    shooter = ship2;
+    const ShipMovesVector &moves;
+    std::vector<char> &lineState;
+    std::vector<int> &lineStateChanged;
+    const prepared::DataStatic &ds;
+    double invSpeed;
+    bool isHandler;
+    QPoint pos;
+    int hour{};
+    int index{};
 
-    handlerInvSpeed = 1. / handler.speed();
-    shooterInvSpeed = 1. / shooter.speed();
-    handlerInvSpeed2 = handlerInvSpeed*handlerInvSpeed;
-    shooterInvSpeed2 = shooterInvSpeed*shooterInvSpeed;
-}
+    enum : bool {
+        handler = true,
+        shooter = false,
+    };
 
-MovesToPathConverter::PathAndTime MovesToPathConverter::createPath(const ShipMovesVector &handlerVec, const ShipMovesVector &shooterVec)
+    void addGoHome()
+    {
+        if (!pos.isNull()) {
+            hour += qCeil(qSqrt(pos.x()*pos.x() + pos.y()*pos.y())*invSpeed);
+        }
+    }
+
+    bool atEnd() const { return index == moves.size(); }
+};
+
+bool processTime(ProcessTimeData &data)
 {
-    clear();
-
-    // позиции по последней записи в path
-    QPoint hpos, spos;
-    // часы по последней записи в path
-    int hhour{0}, shour{0};
-    // текущие индексы в векторе
-    int hcur{0}, scur{0};
-    // число записей в пути
-    // сами записи
-    pat.handlerPath.clear();
-    pat.shooterPath.clear();
-    pat.handlerPath.reserve(handlerVec.size() * 3);
-    pat.shooterPath.reserve(handlerVec.size() * 3);
-    // удобные функции
-#if 0
-#define addh(act) pat.handlerPath.append({hpos.x(), hpos.y(), hhour, act});
-#define adds(act) pat.shooterPath.append({spos.x(), spos.y(), shour, act});
-#else
-    auto addh = [this, &hpos, &hhour](int act) {
-        pat.handlerPath.append({hpos.x(), hpos.y(), hhour, act});
-    };
-    auto adds = [this, &spos, &shour](int act) {
-        pat.shooterPath.append({spos.x(), spos.y(), shour, act});
-    };
-#endif
-    // число оставшихся датчиков на укладчике
-    int sensors{ handler.sensors() };
-
+    bool processed{ false };
     while (true) {
-        // детектор дедлока
-        bool hasSomeActions{ false };
-        // сначала пытаемся сделать всё, что может обработчик без помощи шутера, потом наоборот. Так и чередуем
-        while (true) {
-            if (hcur >= handlerVec.size())
-                break;
-            const auto input{ handlerVec.at(hcur) };
-            char & calls = lineState[input.tracNum];
-            if (calls != 0 && calls != 2) {
-                // мы не можем обоработать эту трассу
-                // отдаём работу шутеру, может он разблокирует её
-                break;
-            }
-            const auto trac{ ds.tracs.at(input.tracNum) };
-            // сначала нужно добраться
-            if (hpos != input.first(ds.tracs)) {
-                addh(prepared::sa_movement);
-                QPoint delta{ hpos - input.first(ds.tracs) };
-                hpos = input.first(ds.tracs);
-                hhour += qCeil(qSqrt(delta.x()*delta.x() + delta.y()*delta.y()) * handlerInvSpeed);
-            }
-            // теперь нужно подождать, когда отработает другое судно и/или откроется трасса
-            int t1{ qMax(hhour, lineStateChanged.at(input.tracNum)) };
-            int t2{ qMax(t1, trac.nearAvailable(t1, qCeil(trac.dist() * handlerInvSpeed))) };
-            if (t2 > hhour) {
-                addh(prepared::sa_waiting);
-                hhour = t2;
-            }
-            if (calls == 0) {
-                sensors -= trac.sensors();
-                if (sensors < 0) {
-                    // был задан некорректный путь
-                    return {};
-                }
-                addh(prepared::sa_layout);
-            }
-            else {
-                sensors += trac.sensors();
-                addh(prepared::sa_collection);
-            }
-            hpos = input.second(ds.tracs);
-            hhour += qCeil(trac.dist() * handlerInvSpeed);
-            hasSomeActions = true;
+        if (data.index >= data.moves.size())
+            break;
+        const auto input{ data.moves.at(data.index) };
+        char & calls = data.lineState[input.tracNum];
+        if (data.isHandler && calls == 1) {
+            break;
+        }
+        if (!data.isHandler && calls != 1) {
+            break;
+        }
+        processed = true;
+
+        const auto trac{ data.ds.tracs.at(input.tracNum) };
+        const auto p1{ input.first(data.ds.tracs) };
+        const auto p2{ input.second(data.ds.tracs) };
+        // сначала нужно добраться
+        if (data.pos != p1) {
+            QPoint d{ data.pos - p1 };
+            data.hour += qCeil(qSqrt(d.x()*d.x() + d.y()*d.y()) * data.invSpeed);
+            data.pos = p1;
+        }
+
+        // теперь нужно подождать, когда отработает другое судно и/или откроется трасса
+        int &hourToOther = data.lineStateChanged.at(input.tracNum);
+        if (hourToOther > data.hour)
+            data.hour = hourToOther;
+        int hourToOpen{ trac.nearAvailable(data.hour, qCeil(trac.dist() * data.invSpeed)) };
+        if (hourToOpen > data.hour)
+            data.hour = hourToOpen;
+
+        data.hour += qCeil(trac.dist() * data.invSpeed);
+        data.pos = p2;
+
+        ++data.index;
+
+        if (calls == 2) {
+            calls = 0;
+            hourToOther = 0;
+        }
+        else {
             ++calls;
-            ++hcur;
-            lineStateChanged[input.tracNum] = hhour;
-        }
-
-        while (true) {
-            if (scur >= shooterVec.size())
-                break;
-            const auto input{ shooterVec.at(scur) };
-            char & calls = lineState[input.tracNum];
-            if (calls != 1) {
-                // мы не можем обоработать эту трассу
-                // отдаём работу укладчику, может он разблокирует её
-                break;
-            }
-            const auto trac{ ds.tracs.at(input.tracNum) };
-            // сначала нужно добраться
-            if (spos != input.first(ds.tracs)) {
-                adds(prepared::sa_movement);
-                QPoint delta{ spos - input.first(ds.tracs) };
-                spos = input.first(ds.tracs);
-                shour += qCeil(qSqrt(delta.x()*delta.x() + delta.y()*delta.y()) * shooterInvSpeed);
-            }
-            // теперь нужно подождать, когда отработает другое судно и/или откроется трасса
-            int t1{ qMax(shour, lineStateChanged.at(input.tracNum)) };
-            int t2{ qMax(t1, trac.nearAvailable(t1, qCeil(trac.dist() * shooterInvSpeed))) };
-            if (t2 > shour) {
-                adds(prepared::sa_waiting);
-                shour = t2;
-            }
-            adds(prepared::sa_shooting);
-            spos = input.second(ds.tracs);
-            shour += qCeil(trac.dist() * shooterInvSpeed);
-            hasSomeActions = true;
-            ++calls;
-            ++scur;
-            lineStateChanged[input.tracNum] = shour;
-        }
-
-        if (!hasSomeActions) {
-            // проверим, почему мы ничего не делали
-            if (scur >= shooterVec.size() && hcur >= handlerVec.size()) {
-                // всё хорошо, можно выйти из цикла и продолжить обработку
-                break;
-            }
-
-            // всё плохо
-            return {};
+            hourToOther = data.hour;
         }
     }
-    // но ещё нужно добавить записи возвращения домой
-    if (!hpos.isNull()) {
-        addh(prepared::sa_movement);
-        hhour += qCeil(qSqrt(hpos.x()*hpos.x() + hpos.y()*hpos.y()) * handlerInvSpeed);
-        hpos = QPoint{};
-    }
-    addh(prepared::sa_waiting);
-
-    if (!spos.isNull()) {
-        adds(prepared::sa_movement);
-        shour += qCeil(qSqrt(spos.x()*spos.x() + spos.y()*spos.y()) * shooterInvSpeed);
-        spos = QPoint{};
-    }
-    adds(prepared::sa_waiting);
-
-    PathAndTime result;
-    result.handlerPath = pat.handlerPath;
-    result.shooterPath = pat.shooterPath;
-    result.time = qMax(hhour, shour);
-    return result;
+    return processed;
 }
 
-#define YT 0
-
+}
 
 int MovesToPathConverter::calculateHours(const ShipMovesVector &handlerVec, const ShipMovesVector &shooterVec)
 {
-    static std::vector<char> lineState;
-    static std::vector<int> lineStateChanged;
-
     if (lineState.size() != ds.tracs.size()) {
         lineState.resize(ds.tracs.size(), 0);
         lineStateChanged.resize(ds.tracs.size(), 0);
     }
 
-    // позиции по последней записи в path
-    QPoint hpos, spos;
-    // часы по последней записи в path
-    int hhour{0}, shour{0};
-    // текущие индексы в векторе
-    int hcur{0}, scur{0};
+    ProcessTimeData handler{ handlerVec, lineState, lineStateChanged, ds,
+                handlerInvSpeed, ProcessTimeData::handler };
+    ProcessTimeData shooter{ shooterVec, lineState, lineStateChanged, ds,
+                shooterInvSpeed, ProcessTimeData::shooter };
 
     while (true) {
-        // детектор дедлока
-        bool hasSomeActions{ false };
-        // сначала пытаемся сделать всё, что может обработчик без помощи шутера, потом наоборот. Так и чередуем
-        while (true) {
-            if (hcur >= handlerVec.size())
-                break;
-            const auto input{ handlerVec.at(hcur) };
-            char & calls = lineState[input.tracNum];
-            if (calls == 1) {
-                // мы не можем обоработать эту трассу
-                // отдаём работу шутеру, может он разблокирует её
-                break;
-            }
-            const auto trac{ ds.tracs.at(input.tracNum) };
-            const auto p1{ input.first(ds.tracs) };
-            const auto p2{ input.second(ds.tracs) };
-            // сначала нужно добраться
-            if (hpos != p1) {
-                QPoint delta{ hpos - p1 };
-                hpos = p1;
-#if YT
-                hhour += isqrt((delta.x()*delta.x() + delta.y()*delta.y())*handlerInvSpeed2);
-#else
-                hhour += qCeil(qSqrt(delta.x()*delta.x() + delta.y()*delta.y())*handlerInvSpeed);
-#endif
-            }
+        bool p1 = processTime(handler);
+        bool p2 = processTime(shooter);
 
-            // теперь нужно подождать, когда отработает другое судно и/или откроется трасса
-            int t1{ lineStateChanged.at(input.tracNum) };
-            if (t1 > hhour)
-                hhour = t1;
-            int t2{ trac.nearAvailable(hhour, qCeil(trac.dist() * handlerInvSpeed)) };
-            if (t2 > hhour)
-                hhour = t2;
-
-            hpos = p2;
-            hhour += qCeil(trac.dist() * handlerInvSpeed);
-            hasSomeActions = true;
-
-            ++hcur;
-            lineStateChanged[input.tracNum] = hhour;
-
-            if (calls == 2) {
-                calls = 0;
-                lineStateChanged[input.tracNum] = 0;
-            }
-            else
-                ++calls;
-        }
-
-        while (true) {
-            if (scur >= shooterVec.size())
-                break;
-            const auto input{ shooterVec.at(scur) };
-            char & calls = lineState[input.tracNum];
-            if (calls != 1) {
-                // мы не можем обоработать эту трассу
-                // отдаём работу укладчику, может он разблокирует её
-                break;
-            }
-            const auto trac{ ds.tracs.at(input.tracNum) };
-            const auto p1{ input.first(ds.tracs) };
-            const auto p2{ input.second(ds.tracs) };
-            // сначала нужно добраться
-            if (spos != p1) {
-                QPoint delta{ spos - p1 };
-                spos = p1;
-#if YT
-                shour += isqrt((delta.x()*delta.x() + delta.y()*delta.y())*shooterInvSpeed2);
-#else
-                shour += qCeil(qSqrt(delta.x()*delta.x() + delta.y()*delta.y())*shooterInvSpeed);
-#endif
-            }
-            // теперь нужно подождать, когда отработает другое судно и/или откроется трасса
-            int t1{ lineStateChanged.at(input.tracNum) };
-            if (t1 > shour)
-                shour = t1;
-            int t2{ trac.nearAvailable(shour, qCeil(trac.dist() * shooterInvSpeed)) };
-            if (t2 > shour)
-                shour = t2;
-
-            spos = p2;
-            shour += qCeil(trac.dist() * shooterInvSpeed);
-            hasSomeActions = true;
-            ++calls;
-            ++scur;
-            lineStateChanged[input.tracNum] = shour;
-        }
-
-        if (!hasSomeActions) {
+        if (!p1 && !p2) {
             // проверим, почему мы ничего не делали
-            if (scur >= shooterVec.size() && hcur >= handlerVec.size()) {
+            if (shooter.atEnd() && handler.atEnd()) {
                 // всё хорошо, можно выйти из цикла и продолжить обработку
                 break;
             }
@@ -319,24 +155,161 @@ int MovesToPathConverter::calculateHours(const ShipMovesVector &handlerVec, cons
             return -1;
         }
     }
+
     // но ещё нужно добавить записи возвращения домой
-    if (!hpos.isNull()) {
-#if YT
-        hhour += isqrt((hpos.x()*hpos.x() + hpos.y()*hpos.y())*handlerInvSpeed2);
-#else
-        hhour += qCeil(qSqrt(hpos.x()*hpos.x() + hpos.y()*hpos.y())*handlerInvSpeed);
-#endif
+    handler.addGoHome();
+    shooter.addGoHome();
+
+    return qMax(shooter.hour, handler.hour);
+}
+
+namespace {
+
+struct ProcessPathData
+{
+    prepared::Path &path;
+    const ShipMovesVector &moves;
+    std::vector<char> &lineState;
+    std::vector<int> &lineStateChanged;
+    const prepared::DataStatic &ds;
+    double invSpeed;
+    bool isHandler;
+    QPoint pos;
+    int hour{};
+    int index{};
+
+    enum : bool {
+        handler = true,
+        shooter = false,
+    };
+
+    void addAction(int act)
+    {
+        path.append({pos.x(), pos.y(), hour, act});
+    };
+
+    void addGoHome()
+    {
+        if (!pos.isNull()) {
+            hour += qCeil(qSqrt(pos.x()*pos.x() + pos.y()*pos.y())*invSpeed);
+        }
+
+        if (!pos.isNull()) {
+            addAction(prepared::sa_movement);
+            hour += qCeil(qSqrt(pos.x()*pos.x() + pos.y()*pos.y()) * invSpeed);
+            pos = QPoint{};
+        }
+        addAction(prepared::sa_waiting);
     }
 
-    if (!spos.isNull()) {
-#if YT
-        shour += isqrt((spos.x()*spos.x() + spos.y()*spos.y())*shooterInvSpeed2);
-#else
-        shour += qCeil(qSqrt(spos.x()*spos.x() + spos.y()*spos.y())*shooterInvSpeed);
-#endif
+    bool atEnd() const { return index == moves.size(); }
+};
+
+bool processPath(ProcessPathData &data)
+{
+    bool processed{ false };
+    while (true) {
+        if (data.index >= data.moves.size())
+            break;
+        const auto input{ data.moves.at(data.index) };
+        char & calls = data.lineState[input.tracNum];
+        if (data.isHandler && calls == 1) {
+            break;
+        }
+        if (!data.isHandler && calls != 1) {
+            break;
+        }
+        processed = true;
+
+        const auto trac{ data.ds.tracs.at(input.tracNum) };
+        const auto p1{ input.first(data.ds.tracs) };
+        const auto p2{ input.second(data.ds.tracs) };
+        // сначала нужно добраться
+        if (data.pos != p1) {
+            data.addAction(prepared::sa_movement);
+            QPoint d{ data.pos - p1 };
+            data.hour += qCeil(qSqrt(d.x()*d.x() + d.y()*d.y()) * data.invSpeed);
+            data.pos = p1;
+        }
+        // теперь нужно подождать, когда отработает другое судно и/или откроется трасса
+        int &hourToOther = data.lineStateChanged.at(input.tracNum);
+        int t1{ qMax(data.hour, hourToOther) };
+        int t2{ qMax(t1, trac.nearAvailable(t1, qCeil(trac.dist() * data.invSpeed))) };
+        if (t2 > data.hour) {
+            data.addAction(prepared::sa_waiting);
+            data.hour = t2;
+        }
+        // теперь и действия можно выполнить
+        switch (calls) {
+        case 0: data.addAction(prepared::sa_layout); break;
+        case 1: data.addAction(prepared::sa_shooting); break;
+        case 2: data.addAction(prepared::sa_collection); break;
+        }
+
+        data.hour += qCeil(trac.dist() * data.invSpeed);
+        data.pos = p2;
+
+        ++data.index;
+
+        if (calls == 2) {
+            calls = 0;
+            hourToOther = 0;
+        }
+        else {
+            ++calls;
+            hourToOther = data.hour;
+        }
+    }
+    return processed;
+}
+
+}
+
+MovesToPathConverter::PathAndTime
+MovesToPathConverter::createPath(const ShipMovesVector &handlerVec, const ShipMovesVector &shooterVec)
+{
+    lineState.clear();
+    lineStateChanged.clear();
+    if (lineState.size() != ds.tracs.size()) {
+        lineState.resize(ds.tracs.size(), 0);
+        lineStateChanged.resize(ds.tracs.size(), 0);
     }
 
-    return qMax(hhour, shour);
+    pat.handlerPath.clear();
+    pat.shooterPath.clear();
+
+    ProcessPathData handler{ pat.handlerPath, handlerVec, lineState, lineStateChanged, ds,
+                handlerInvSpeed, ProcessPathData::handler };
+    ProcessPathData shooter{ pat.shooterPath, shooterVec, lineState, lineStateChanged, ds,
+                shooterInvSpeed, ProcessPathData::shooter };
+
+    while (true) {
+        bool p1 = processPath(handler);
+        bool p2 = processPath(shooter);
+
+        if (!p1 && !p2) {
+            // проверим, почему мы ничего не делали
+            if (shooter.atEnd() && handler.atEnd()) {
+                // всё хорошо, можно выйти из цикла и продолжить обработку
+                break;
+            }
+            // так как мы выходим, не до конца обработав входные данные, то обнулить их необходимо явно
+            lineState.clear();
+            lineStateChanged.clear();
+            // всё плохо
+            return {};
+        }
+    }
+
+    // но ещё нужно добавить записи возвращения домой
+    handler.addGoHome();
+    shooter.addGoHome();
+
+    PathAndTime result;
+    result.handlerPath = pat.handlerPath;
+    result.shooterPath = pat.shooterPath;
+    result.time = qMax(handler.hour, shooter.hour);
+    return result;
 }
 
 MovesToPathConverter::StringPathAndCost MovesToPathConverter::createQStringPath(const PathAndTime &path)
@@ -363,11 +336,4 @@ prepared::DataDynamic MovesToPathConverter::createDD(const PathAndTime &path)
     result.pathShooter = path.shooterPath;
     result.has = true;
     return result;
-}
-
-void MovesToPathConverter::clear()
-{
-    lineState.fill(0, lineState.size());
-    lineStateChanged.fill(0, lineStateChanged.size());
-
 }

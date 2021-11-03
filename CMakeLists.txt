@@ -79,3 +79,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE Qt5::Widgets Qt5::Gui)
 set_target_properties(${PROJECT_NAME} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${BUILD_DIR}
     )
+
+
+#target_compile_options(${PROJECT_NAME} PRIVATE -O3)
