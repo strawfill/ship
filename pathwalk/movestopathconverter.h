@@ -47,9 +47,14 @@ public:
         bool isValid() const { return cost > 0; }
     };
 
+    // проверить, не будет ли отрицательное число датчиков на судне согласно заданному маршруту
+    // на входе ожидаются номера трасс, строго по два включения номера для каждой трассы
+    bool handlerCanPassIt(const std::vector<int> handlerVec) const;
+
     void setShips(const prepared::Handler &ship1, const prepared::Shooter &ship2);
 
     PathAndTime createPath(const ShipMovesVector &handlerVec, const ShipMovesVector &shooterVec);
+    int calculateHours(const ShipMovesVector &handlerVec, const ShipMovesVector &shooterVec);
     StringPathAndCost createQStringPath(const ShipMovesVector &handlerVec, const ShipMovesVector &shooterVec)
     { return createQStringPath(createPath(handlerVec, shooterVec)); }
     StringPathAndCost createQStringPath(const PathAndTime &path);
@@ -65,6 +70,8 @@ private:
     QVector<int> lineStateChanged;
     double handlerInvSpeed{};
     double shooterInvSpeed{};
+    double handlerInvSpeed2{};
+    double shooterInvSpeed2{};
     PathAndTime pat;
 
     prepared::DataStatic ds;

@@ -14,6 +14,7 @@ AlgoBruteForce::AlgoBruteForce(const prepared::DataStatic ads)
 
 prepared::DataDynamic AlgoBruteForce::find()
 {
+    // std::next_permutation не требует много времени, нет смысла оптимизировать...
 #if TTT
     {
         QElapsedTimer tm; tm.start();
@@ -58,7 +59,7 @@ prepared::DataDynamic AlgoBruteForce::find()
 #if TTT
     qint64 d0{},d1{},d2{},d3{},d4{},d5{},dd1{},dd2{},dd3{},dd4{},dd5{};
 #endif
-    int varvara{0};
+    int varvara{0}; int alexeevna{0}; int koroleva{0};
     int time = INT_MAX;
     prepared::DataDynamic result;
 
@@ -79,6 +80,27 @@ prepared::DataDynamic AlgoBruteForce::find()
     ShipMovesVector smoves;
     smoves.resize(size);
 
+    std::vector<std::vector<int> > splacesVariants;
+
+
+    int permutations{1};
+    int tempSize{size};
+    while (tempSize) {
+        permutations *= tempSize;
+        --tempSize;
+    }
+
+    splacesVariants.reserve(permutations);
+    {
+        std::vector<int> temp;
+        temp.resize(size);
+        int genTemp{-1};
+        std::generate(temp.begin(), temp.end(), [&genTemp](){ return ++genTemp; } );
+        do {
+            splacesVariants.push_back(temp);
+        } while (std::next_permutation(temp.begin(), temp.end()));
+    }
+
     // выбор кораблей 1
     for (int hi = 0; hi < ds.handlers.size(); ++hi) {
         // выбор кораблей 2
@@ -87,6 +109,12 @@ prepared::DataDynamic AlgoBruteForce::find()
             for (int i = 0; i < size2; ++i)
                 hplaces.at(i) = i/2;
             do {
+                // проверим, что число сенсоров не будет отрицательным - нам такое не нужно
+                if (!converter.handlerCanPassIt(hplaces)) {
+                    continue;
+                }
+                ++koroleva;
+
                 for (int i = 0; i < size2; ++i) {
                     hmoves[i] = ShipMove{short(hplaces.at(i)), false};
                 }
@@ -101,7 +129,8 @@ prepared::DataDynamic AlgoBruteForce::find()
                     for (int i = 0; i < size; ++i)
                         splaces.at(i) = i;
 
-                    do {
+                    for (int perm = 0; perm < permutations; ++perm) {
+                        splaces = splacesVariants.at(perm);
                         // задано всё, кроме выбора направления
                         for (int i = 0; i < size; ++i) {
                             smoves[i] = ShipMove{short(splaces.at(i)), false};
@@ -120,13 +149,20 @@ prepared::DataDynamic AlgoBruteForce::find()
                             d1 = tm.nsecsElapsed() - d0;
 #endif
                             ++varvara;
+#if 0
+                            int hours{ converter.calculateHours(hmoves, smoves) };
+#else
                             auto temp{ converter.createPath(hmoves, smoves)};
+                            int hours = temp.time;
+#endif
 #if TTT
                             d2 = tm.nsecsElapsed() - d1;
 #endif
-                            if (temp.isValid() && temp.time < time) {
-                                result = converter.createDD(temp);
-                                time = temp.time;
+                            if (hours > 0 && hours < time) {
+                                //qDebug() << "h" << hours << "bef" << time;
+                                ++alexeevna;
+                                result = converter.createDD(hmoves, smoves);
+                                time = hours;
                             }
 #if TTT
                             d3 = tm.nsecsElapsed() - d2;
@@ -137,7 +173,7 @@ prepared::DataDynamic AlgoBruteForce::find()
 
                         }
 
-                    } while(std::next_permutation(splaces.begin(), splaces.end()));
+                    }
 
                 }
 
@@ -151,6 +187,8 @@ prepared::DataDynamic AlgoBruteForce::find()
     qDebug() << "time" << time;
     qDebug() << "cost" << prepared::totalCost(ds, result);
     qDebug() << "speed:" << double(varvara) / elaps;
+    qDebug() << "changes" << alexeevna;
+    qDebug() << "real ops" << koroleva;
 #if TTT
     qDebug() << "deltas" << dd1 / 1e6 / varvara << dd2 / 1e6 / varvara << dd3 / 1e6 / varvara
              << "other" << elaps - dd2 / 1e6 / varvara;

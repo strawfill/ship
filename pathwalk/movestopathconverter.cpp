@@ -10,6 +10,34 @@ MovesToPathConverter::MovesToPathConverter(const prepared::DataStatic &ads)
     lineStateChanged.fill(0, trs.size());
 }
 
+
+
+bool MovesToPathConverter::handlerCanPassIt(const std::vector<int> handlerVec) const
+{
+    // не будем пересоздавать его, пусть всегда существует
+    static std::vector<char> passItCheck;
+    passItCheck.resize(handlerVec.size(), 0);
+    int sensors{ handler.sensors() };
+
+    for (unsigned i = 0; i < handlerVec.size(); ++i) {
+        const auto trac{ ds.tracs.at(handlerVec.at(i)) };
+        char & was = passItCheck.at(unsigned(handlerVec.at(i)));
+        if (!was) {
+            was = 1;
+            sensors -= trac.sensors();
+            if (sensors < 0) {
+                passItCheck.clear();
+                return false;
+            }
+        }
+        else {
+            was = 0;
+            sensors += trac.sensors();
+        }
+    }
+    return true;
+}
+
 void MovesToPathConverter::setShips(const prepared::Handler &ship1, const prepared::Shooter &ship2)
 {
     handler = ship1;
@@ -17,15 +45,54 @@ void MovesToPathConverter::setShips(const prepared::Handler &ship1, const prepar
 
     handlerInvSpeed = 1. / handler.speed();
     shooterInvSpeed = 1. / shooter.speed();
+    handlerInvSpeed2 = handlerInvSpeed*handlerInvSpeed;
+    shooterInvSpeed2 = shooterInvSpeed*shooterInvSpeed;
+}
+
+namespace {
+
+int32_t isqrt(double d) {
+    // далее алгоритм из https://en.wikipedia.org/wiki/Methods_of_computing_square_roots
+    // который считает корень из целого числа (с округлением вниз)
+    int32_t num = int(d);
+    int32_t res = 0;
+    int32_t bit = 1 << 30; // The second-to-top bit is set.
+                           // Same as ((unsigned) INT32_MAX + 1) / 2.
+
+    // "bit" starts at the highest power of four <= the argument.
+    while (bit > num)
+        bit >>= 2;
+
+    while (bit != 0) {
+        if (num >= res + bit) {
+            num -= res + bit;
+            res = (res >> 1) + bit;
+        } else
+            res >>= 1;
+        bit >>= 2;
+    }
+
+    // но нам нужно, чтобы считало для double, да ещё и с округлением вверх, поэтому
+    // прибавим единицу, если необходимо
+
+    // случаи:
+    // 6*6 < 35.99999 - оставим так, 6 подходит
+    // 6*6 < 36.00000 - оставим так, 6 подходит
+    // 6*6 < 36.00001 - прибавим единицу
+    if (res*res < d)
+        ++res;
+
+    return res;
+}
+
 }
 
 MovesToPathConverter::PathAndTime MovesToPathConverter::createPath(const ShipMovesVector &handlerVec, const ShipMovesVector &shooterVec)
 {
     clear();
 
-    constexpr QPoint startPos{0,0};
     // позиции по последней записи в path
-    QPoint hpos{startPos}, spos{startPos};
+    QPoint hpos, spos;
     // часы по последней записи в path
     int hhour{0}, shour{0};
     // текущие индексы в векторе
@@ -37,14 +104,17 @@ MovesToPathConverter::PathAndTime MovesToPathConverter::createPath(const ShipMov
     pat.handlerPath.reserve(handlerVec.size() * 3);
     pat.shooterPath.reserve(handlerVec.size() * 3);
     // удобные функции
-//#define addh(act) pat.handlerPath.append({hpos.x(), hpos.y(), hhour, act});
-//#define adds(act) pat.shooterPath.append({spos.x(), spos.y(), shour, act});
+#if 0
+#define addh(act) pat.handlerPath.append({hpos.x(), hpos.y(), hhour, act});
+#define adds(act) pat.shooterPath.append({spos.x(), spos.y(), shour, act});
+#else
     auto addh = [this, &hpos, &hhour](int act) {
         pat.handlerPath.append({hpos.x(), hpos.y(), hhour, act});
     };
     auto adds = [this, &spos, &shour](int act) {
         pat.shooterPath.append({spos.x(), spos.y(), shour, act});
     };
+#endif
     // число оставшихся датчиков на укладчике
     int sensors{ handler.sensors() };
 
@@ -143,19 +213,17 @@ MovesToPathConverter::PathAndTime MovesToPathConverter::createPath(const ShipMov
         }
     }
     // но ещё нужно добавить записи возвращения домой
-    if (hpos != startPos) {
+    if (!hpos.isNull()) {
         addh(prepared::sa_movement);
-        QPoint delta{ hpos - startPos };
-        hpos = startPos;
-        hhour += qCeil(qSqrt(delta.x()*delta.x() + delta.y()*delta.y()) * handlerInvSpeed);
+        hhour += qCeil(qSqrt(hpos.x()*hpos.x() + hpos.y()*hpos.y()) * handlerInvSpeed);
+        hpos = QPoint{};
     }
     addh(prepared::sa_waiting);
 
-    if (spos != startPos) {
+    if (!spos.isNull()) {
         adds(prepared::sa_movement);
-        QPoint delta{ spos - startPos };
-        spos = startPos;
-        shour += qCeil(qSqrt(delta.x()*delta.x() + delta.y()*delta.y()) * shooterInvSpeed);
+        shour += qCeil(qSqrt(spos.x()*spos.x() + spos.y()*spos.y()) * shooterInvSpeed);
+        spos = QPoint{};
     }
     adds(prepared::sa_waiting);
 
@@ -164,6 +232,143 @@ MovesToPathConverter::PathAndTime MovesToPathConverter::createPath(const ShipMov
     result.shooterPath = pat.shooterPath;
     result.time = qMax(hhour, shour);
     return result;
+}
+
+#define YT 0
+
+int MovesToPathConverter::calculateHours(const ShipMovesVector &handlerVec, const ShipMovesVector &shooterVec)
+{
+    static std::vector<char> lineState;
+    static std::vector<int> lineStateChanged;
+    if (lineState.size() != ds.tracs.size()) {
+        lineState.resize(ds.tracs.size(), 0);
+        lineStateChanged.resize(ds.tracs.size(), 0);
+    }
+
+    // позиции по последней записи в path
+    QPoint hpos, spos;
+    // часы по последней записи в path
+    int hhour{0}, shour{0};
+    // текущие индексы в векторе
+    int hcur{0}, scur{0};
+
+    while (true) {
+        // детектор дедлока
+        bool hasSomeActions{ false };
+        // сначала пытаемся сделать всё, что может обработчик без помощи шутера, потом наоборот. Так и чередуем
+        while (true) {
+            if (hcur >= handlerVec.size())
+                break;
+            const auto input{ handlerVec.at(hcur) };
+            char & calls = lineState[input.tracNum];
+            if (calls == 1) {
+                // мы не можем обоработать эту трассу
+                // отдаём работу шутеру, может он разблокирует её
+                break;
+            }
+            const auto trac{ ds.tracs.at(input.tracNum) };
+            const auto p1{ input.first(ds.tracs) };
+            const auto p2{ input.second(ds.tracs) };
+            // сначала нужно добраться
+            if (hpos != p1) {
+                QPoint delta{ hpos - p1 };
+                hpos = p1;
+#if YT
+                hhour += isqrt((delta.x()*delta.x() + delta.y()*delta.y())*handlerInvSpeed2);
+#else
+                hhour += qCeil(qSqrt(delta.x()*delta.x() + delta.y()*delta.y())*handlerInvSpeed);
+#endif
+            }
+
+            // теперь нужно подождать, когда отработает другое судно и/или откроется трасса
+            int t1{ lineStateChanged.at(input.tracNum) };
+            if (t1 > hhour)
+                hhour = t1;
+            int t2{ trac.nearAvailable(hhour, qCeil(trac.dist() * handlerInvSpeed)) };
+            if (t2 > hhour)
+                hhour = t2;
+
+            hpos = p2;
+            hhour += qCeil(trac.dist() * handlerInvSpeed);
+            hasSomeActions = true;
+
+            // если число вызовов 2, то нужно обнулить. Иначе задать 1
+            calls = !(calls >> 1);
+
+            ++hcur;
+            lineStateChanged[input.tracNum] = hhour;
+        }
+
+        while (true) {
+            if (scur >= shooterVec.size())
+                break;
+            const auto input{ shooterVec.at(scur) };
+            char & calls = lineState[input.tracNum];
+            if (calls != 1) {
+                // мы не можем обоработать эту трассу
+                // отдаём работу укладчику, может он разблокирует её
+                break;
+            }
+            const auto trac{ ds.tracs.at(input.tracNum) };
+            const auto p1{ input.first(ds.tracs) };
+            const auto p2{ input.second(ds.tracs) };
+            // сначала нужно добраться
+            if (spos != p1) {
+                QPoint delta{ spos - p1 };
+                spos = p1;
+#if YT
+                shour += isqrt((delta.x()*delta.x() + delta.y()*delta.y())*shooterInvSpeed2);
+#else
+                shour += qCeil(qSqrt(delta.x()*delta.x() + delta.y()*delta.y())*shooterInvSpeed);
+#endif
+            }
+            // теперь нужно подождать, когда отработает другое судно и/или откроется трасса
+            int t1{ lineStateChanged.at(input.tracNum) };
+            if (t1 > shour)
+                shour = t1;
+            int t2{ trac.nearAvailable(shour, qCeil(trac.dist() * shooterInvSpeed)) };
+            if (t2 > shour)
+                shour = t2;
+
+            spos = p2;
+            shour += qCeil(trac.dist() * shooterInvSpeed);
+            hasSomeActions = true;
+            ++calls;
+            ++scur;
+            lineStateChanged[input.tracNum] = shour;
+        }
+
+        if (!hasSomeActions) {
+            // проверим, почему мы ничего не делали
+            if (scur >= shooterVec.size() && hcur >= handlerVec.size()) {
+                // всё хорошо, можно выйти из цикла и продолжить обработку
+                break;
+            }
+            // так как мы выходим, не до конца обработав входные данные, то обнулить их необходимо явно
+            lineState.clear();
+            lineStateChanged.clear();
+            // всё плохо
+            return -1;
+        }
+    }
+    // но ещё нужно добавить записи возвращения домой
+    if (!hpos.isNull()) {
+#if YT
+        hhour += isqrt((hpos.x()*hpos.x() + hpos.y()*hpos.y())*handlerInvSpeed2);
+#else
+        hhour += qCeil(qSqrt(hpos.x()*hpos.x() + hpos.y()*hpos.y())*handlerInvSpeed);
+#endif
+    }
+
+    if (!spos.isNull()) {
+#if YT
+        shour += isqrt((spos.x()*spos.x() + spos.y()*spos.y())*shooterInvSpeed2);
+#else
+        shour += qCeil(qSqrt(spos.x()*spos.x() + spos.y()*spos.y())*shooterInvSpeed);
+#endif
+    }
+
+    return qMax(hhour, shour);
 }
 
 MovesToPathConverter::StringPathAndCost MovesToPathConverter::createQStringPath(const PathAndTime &path)
