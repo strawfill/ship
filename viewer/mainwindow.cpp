@@ -238,8 +238,8 @@ void MainWindow::processFile(const QString &filename)
         return;
     }
 
-    AlgoBruteForce algoBruteForce(ds);
-    dd = algoBruteForce.find();
+    //AlgoBruteForce algoBruteForce(ds);
+    //dd = algoBruteForce.find();
 
 
     scene->setSources(ds, dd);
