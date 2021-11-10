@@ -50,7 +50,7 @@ MainWindow::MainWindow(QWidget *parent)
     setStartPauseButtonPixmap(false);
 
     initActions();
-#if 0
+#if 1
     QMimeData md;
     md.setUrls(QList<QUrl>() << QUrl{"file:///" + QDir::currentPath() + "/../input/test_brute_force/simple/test.txt"});
     processMimeData(&md);
