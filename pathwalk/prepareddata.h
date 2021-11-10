@@ -194,6 +194,8 @@ struct DataDynamic
 
     DataDynamic() {  }
     DataDynamic(const raw::Data &data);
+
+    QString toString() const;
 };
 
 qlonglong totalCost(const DataStatic &ds, const DataDynamic &dd);

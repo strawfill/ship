@@ -40,5 +40,7 @@ private slots:
 private:
     Ui::MainWindow *ui;
     SimulationScene *scene{ nullptr };
+
+    QString fileData;
 };
 #endif // MAINWINDOW_H

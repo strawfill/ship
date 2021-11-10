@@ -7,7 +7,8 @@
 
 using namespace prepared;
 
-PathErrorDetector::PathErrorDetector(const prepared::DataStatic &staticData, const prepared::DataDynamic &dynamicData)
+PathErrorDetector::PathErrorDetector(const prepared::DataStatic &staticData,
+                                     const prepared::DataDynamic &dynamicData)
 {
     setDataAndDetectErrors(staticData, dynamicData);
 }
@@ -17,7 +18,8 @@ PathErrorDetector::~PathErrorDetector()
     clear();
 }
 
-void PathErrorDetector::setDataAndDetectErrors(const prepared::DataStatic &staticData, const prepared::DataDynamic &dynamicData)
+void PathErrorDetector::setDataAndDetectErrors(const prepared::DataStatic &staticData,
+                                               const prepared::DataDynamic &dynamicData)
 {
     clear();
     sd = new DataStatic(staticData);
@@ -116,7 +118,22 @@ void PathErrorDetector::detectSpeedAndTimeErrorsFor(const QVector<PathDot> &pd, 
                        << bef.x << bef.y << bef.timeH << bef.activity
                        << ") и (" << cur.x << cur.y << cur.timeH << cur.activity << ")"
                        << "допустимое расстояние (" << possibleR << ") между записями же ("
-                       << qSqrt(deltaR2) << ")";
+                       << qSqrt(deltaR2) << "); скорость корабля (" << speed << ")";
+        }
+
+        // проверим на слишком низкую скорость
+        if (bef.activity != sa_waiting) {
+            const int deltaHless{ deltaH - 1 };
+            const int possibleRless{ deltaHless * speed };
+            if (possibleRless*possibleRless >= deltaR2) {
+                qWarning() << "В" << formatPath << "между записями ("
+                           << bef.x << bef.y << bef.timeH << bef.activity
+                           << ") и (" << cur.x << cur.y << cur.timeH << cur.activity << ")"
+                           << "судно двигалось (" << deltaH
+                           << ") часов, но оно может пройти данное расстояние за ("
+                           << qCeil( qSqrt(deltaR2) / speed) << ") часов; скорость корабля ("
+                           << speed << ")";
+            }
         }
     }
 }
@@ -209,7 +226,7 @@ void PathErrorDetector::detectProcessingTracErrors() const
                 acts << QString::number(a);
             qWarning() << "В" << formatPath << "для трассы ("
                        << trac.p1().x() << trac.p1().y() << trac.p2().x() << trac.p2().y()
-                       << ") ожидалось увидеть раскладку(2), прострел(4) и сбор(3), но встречены только дейстивия ("
+                       << ") ожидалось увидеть раскладку(2), прострел(4) и сбор(3), но встречены только действия ("
                        << acts.join(" , ") << ")";
             continue;
         }

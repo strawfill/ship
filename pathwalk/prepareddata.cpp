@@ -254,7 +254,6 @@ Trac DataStatic::tracViaLine(const Line &line) const
     return line2trac.value(Line{ line.p2(), line.p1() });
 }
 
-
 QVector<QVector<raw::Icee> > DataStatic::iceeToNumbers(const raw::Data &data)
 {
     QVector<QVector<raw::Icee> > result;
@@ -298,6 +297,22 @@ DataDynamic::DataDynamic(const raw::Data &data)
 
     pathShooter = p.at(s).path;
     shooterName = p.at(s).name;
+}
+
+QString DataDynamic::toString() const
+{
+    QString result;
+    result.reserve(100 + 15*(pathHandler.size()+pathShooter.size()));
+    result += formatPath;
+    result += "\n";
+    result += QString{"H %1 %2\n"}.arg(handlerName).arg(pathHandler.size());
+    for (const auto & p : qAsConst(pathHandler))
+        result += QString{"%1 %2 %3 %4\n"}.arg(p.x).arg(p.y).arg(p.timeH).arg(p.activity);
+    result += QString{"S %1 %2\n"}.arg(shooterName).arg(pathShooter.size());
+    for (const auto & p : qAsConst(pathShooter))
+        result += QString{"%1 %2 %3 %4\n"}.arg(p.x).arg(p.y).arg(p.timeH).arg(p.activity);
+    result += "/\n";
+    return result;
 }
 
 qlonglong totalCost(const DataStatic &ds, const DataDynamic &dd)

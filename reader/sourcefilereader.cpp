@@ -412,6 +412,12 @@ void SourceFileReader::readPath()
         if (!convertWithWarnings(shipPath.size, 2))
             continue;
 
+        if (shipPath.size < 1) {
+            qWarning().noquote() << QString("Строка %1. Число записей маршрута корабля %3 должно быть "
+                                            "положительным, но встречено ( %2 )")
+                                    .arg(in.strLineNumber()).arg(shipPath.size).arg(shipPath.name);
+        }
+
         shipPath.path.reserve(shipPath.size);
 
         // чтение точек для пути корабля

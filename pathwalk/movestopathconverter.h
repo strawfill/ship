@@ -56,9 +56,7 @@ public:
 
     PathAndTime createPath(const ShipMovesVector &handlerVec, const ShipMovesVector &shooterVec);
     int calculateHours(const ShipMovesVector &handlerVec, const ShipMovesVector &shooterVec);
-    StringPathAndCost createQStringPath(const ShipMovesVector &handlerVec, const ShipMovesVector &shooterVec)
-    { return createQStringPath(createPath(handlerVec, shooterVec)); }
-    StringPathAndCost createQStringPath(const PathAndTime &path);
+
     prepared::DataDynamic createDD(const ShipMovesVector &handlerVec, const ShipMovesVector &shooterVec)
     { return createDD(createPath(handlerVec, shooterVec)); }
     prepared::DataDynamic createDD(const PathAndTime &path);
@@ -66,8 +64,6 @@ public:
 private:
     std::vector<char> lineState;
     std::vector<int>lineStateChanged;
-    double handlerInvSpeed{};
-    double shooterInvSpeed{};
     PathAndTime pat;
 
     prepared::DataStatic ds;

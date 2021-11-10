@@ -137,10 +137,11 @@ void SourceErrorDetector::errorsWithLimitsPath() const
     QSet<int> opsS{ 0, 1, 4 };
     const auto & path{ data->path };
     for (int i = 0; i < path.size(); ++i) {
-        if (path.at(i).size <= 0) {
-            qWarning()<< "Задано некорректное (неположительное) число записей для пути" << Ship::typeToQChar(path.at(i).type)
-                      << path.at(i).name << "(" << path.at(i).size << ")";
-        }
+        // данная проверка (4 строки ниже) уже проводилась несколькими шагами ранее
+        //if (path.at(i).size <= 0) {
+        //    qWarning()<< "Задано некорректное (неположительное) число записей для пути" << Ship::typeToQChar(path.at(i).type)
+        //              << path.at(i).name << "(" << path.at(i).size << ")";
+        //}
         const auto & pathdots{ path.at(i).path };
         if (path.at(i).type == Ship::Type::shooter) {
             for (int k = 0; k < pathdots.size(); ++k) {

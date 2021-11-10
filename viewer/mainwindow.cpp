@@ -50,10 +50,11 @@ MainWindow::MainWindow(QWidget *parent)
     setStartPauseButtonPixmap(false);
 
     initActions();
-
+#if 0
     QMimeData md;
     md.setUrls(QList<QUrl>() << QUrl{"file:///" + QDir::currentPath() + "/../input/test_brute_force/simple/test.txt"});
     processMimeData(&md);
+#endif
 }
 
 void MainWindow::initActions()
@@ -237,15 +238,38 @@ void MainWindow::processFile(const QString &filename)
         scene->setSources(ds, dd);
         return;
     }
-
-    //AlgoBruteForce algoBruteForce(ds);
-    //dd = algoBruteForce.find();
+#if 1
+    AlgoBruteForce algoBruteForce(ds);
+    dd = algoBruteForce.find();
+#endif
 
 
     scene->setSources(ds, dd);
 
-    ui->plainTextEdit->appendPlainText("-- стоимость аренды по созданному маршруту равна " +
-                                       QString::number(prepared::totalCost(ds, dd)));
+    if (dd.has) {
+        ui->plainTextEdit->appendPlainText("-- стоимость аренды по созданному маршруту равна " +
+                                           QString::number(prepared::totalCost(ds, dd)));
+        QFile file("out.txt");
+        if (file.open(QIODevice::Text|QIODevice::ReadWrite|QIODevice::Truncate)) {
+            QFile origin(filename);
+            QTextStream ts(&file);
+            if (origin.open(QIODevice::Text|QIODevice::ReadOnly)) {
+                origin.seek(0);
+                ts << origin.readAll();
+                ts << "\n";
+                origin.close();
+            }
+            ts << dd.toString();
+
+            file.close();
+        }
+
+        processFile("out.txt");
+
+    }
+    else {
+        ui->plainTextEdit->appendPlainText("-- маршрут не был создан...");
+    }
 }
 
 void MainWindow::postFromClipboardRequested()

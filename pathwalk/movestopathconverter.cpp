@@ -13,9 +13,6 @@ void MovesToPathConverter::setShips(const prepared::Handler &ship1, const prepar
 {
     handler = ship1;
     shooter = ship2;
-
-    handlerInvSpeed = 1. / handler.speed();
-    shooterInvSpeed = 1. / shooter.speed();
 }
 
 bool MovesToPathConverter::handlerCanPassIt(const std::vector<int> handlerVec) const
@@ -52,7 +49,7 @@ struct ProcessTimeData
     std::vector<char> &lineState;
     std::vector<int> &lineStateChanged;
     const prepared::DataStatic &ds;
-    double invSpeed;
+    int speed;
     bool isHandler;
     QPoint pos;
     int hour{};
@@ -66,7 +63,7 @@ struct ProcessTimeData
     void addGoHome()
     {
         if (!pos.isNull()) {
-            hour += qCeil(qSqrt(pos.x()*pos.x() + pos.y()*pos.y())*invSpeed);
+            hour += qCeil(qSqrt(pos.x()*pos.x() + pos.y()*pos.y()) / speed);
         }
     }
 
@@ -95,7 +92,7 @@ bool processTime(ProcessTimeData &data)
         // сначала нужно добраться
         if (data.pos != p1) {
             QPoint d{ data.pos - p1 };
-            data.hour += qCeil(qSqrt(d.x()*d.x() + d.y()*d.y()) * data.invSpeed);
+            data.hour += qCeil(qSqrt(d.x()*d.x() + d.y()*d.y()) / data.speed);
             data.pos = p1;
         }
 
@@ -103,11 +100,11 @@ bool processTime(ProcessTimeData &data)
         int &hourToOther = data.lineStateChanged.at(input.tracNum);
         if (hourToOther > data.hour)
             data.hour = hourToOther;
-        int hourToOpen{ trac.nearAvailable(data.hour, qCeil(trac.dist() * data.invSpeed)) };
+        int hourToOpen{ trac.nearAvailable(data.hour, qCeil(trac.dist() / data.speed)) };
         if (hourToOpen > data.hour)
             data.hour = hourToOpen;
 
-        data.hour += qCeil(trac.dist() * data.invSpeed);
+        data.hour += qCeil(trac.dist() / data.speed);
         data.pos = p2;
 
         ++data.index;
@@ -134,9 +131,9 @@ int MovesToPathConverter::calculateHours(const ShipMovesVector &handlerVec, cons
     }
 
     ProcessTimeData handler{ handlerVec, lineState, lineStateChanged, ds,
-                handlerInvSpeed, ProcessTimeData::handler };
+                this->handler.speed(), ProcessTimeData::handler };
     ProcessTimeData shooter{ shooterVec, lineState, lineStateChanged, ds,
-                shooterInvSpeed, ProcessTimeData::shooter };
+                this->shooter.speed(), ProcessTimeData::shooter };
 
     while (true) {
         bool p1 = processTime(handler);
@@ -172,7 +169,7 @@ struct ProcessPathData
     std::vector<char> &lineState;
     std::vector<int> &lineStateChanged;
     const prepared::DataStatic &ds;
-    double invSpeed;
+    int speed;
     bool isHandler;
     QPoint pos;
     int hour{};
@@ -191,12 +188,8 @@ struct ProcessPathData
     void addGoHome()
     {
         if (!pos.isNull()) {
-            hour += qCeil(qSqrt(pos.x()*pos.x() + pos.y()*pos.y())*invSpeed);
-        }
-
-        if (!pos.isNull()) {
             addAction(prepared::sa_movement);
-            hour += qCeil(qSqrt(pos.x()*pos.x() + pos.y()*pos.y()) * invSpeed);
+            hour += qCeil(qSqrt(pos.x()*pos.x() + pos.y()*pos.y()) / speed);
             pos = QPoint{};
         }
         addAction(prepared::sa_waiting);
@@ -228,13 +221,13 @@ bool processPath(ProcessPathData &data)
         if (data.pos != p1) {
             data.addAction(prepared::sa_movement);
             QPoint d{ data.pos - p1 };
-            data.hour += qCeil(qSqrt(d.x()*d.x() + d.y()*d.y()) * data.invSpeed);
+            data.hour += qCeil(qSqrt(d.x()*d.x() + d.y()*d.y()) / data.speed);
             data.pos = p1;
         }
         // теперь нужно подождать, когда отработает другое судно и/или откроется трасса
         int &hourToOther = data.lineStateChanged.at(input.tracNum);
         int t1{ qMax(data.hour, hourToOther) };
-        int t2{ qMax(t1, trac.nearAvailable(t1, qCeil(trac.dist() * data.invSpeed))) };
+        int t2{ qMax(t1, trac.nearAvailable(t1, qCeil(trac.dist() / data.speed))) };
         if (t2 > data.hour) {
             data.addAction(prepared::sa_waiting);
             data.hour = t2;
@@ -246,7 +239,7 @@ bool processPath(ProcessPathData &data)
         case 2: data.addAction(prepared::sa_collection); break;
         }
 
-        data.hour += qCeil(trac.dist() * data.invSpeed);
+        data.hour += qCeil(trac.dist() / data.speed);
         data.pos = p2;
 
         ++data.index;
@@ -279,9 +272,9 @@ MovesToPathConverter::createPath(const ShipMovesVector &handlerVec, const ShipMo
     pat.shooterPath.clear();
 
     ProcessPathData handler{ pat.handlerPath, handlerVec, lineState, lineStateChanged, ds,
-                handlerInvSpeed, ProcessPathData::handler };
+                this->handler.speed(), ProcessPathData::handler };
     ProcessPathData shooter{ pat.shooterPath, shooterVec, lineState, lineStateChanged, ds,
-                shooterInvSpeed, ProcessPathData::shooter };
+                this->shooter.speed(), ProcessPathData::shooter };
 
     while (true) {
         bool p1 = processPath(handler);
@@ -309,21 +302,6 @@ MovesToPathConverter::createPath(const ShipMovesVector &handlerVec, const ShipMo
     result.handlerPath = pat.handlerPath;
     result.shooterPath = pat.shooterPath;
     result.time = qMax(handler.hour, shooter.hour);
-    return result;
-}
-
-MovesToPathConverter::StringPathAndCost MovesToPathConverter::createQStringPath(const PathAndTime &path)
-{
-    StringPathAndCost result;
-    auto & s{ result.path };
-    s.reserve(15*(path.handlerPath.size()+path.shooterPath.size()));
-    s += QString{"H %1 %2\n"}.arg(handler.name()).arg(path.handlerPath.size());
-    for (const auto & p : qAsConst(path.handlerPath))
-        s += QString{"%1 %2 %3 %4\n"}.arg(p.x).arg(p.y).arg(p.timeH).arg(p.activity);
-    s += QString{"S %1 %2\n"}.arg(shooter.name()).arg(path.shooterPath.size());
-    for (const auto & p : qAsConst(path.shooterPath))
-        s += QString{"%1 %2 %3 %4\n"}.arg(p.x).arg(p.y).arg(p.timeH).arg(p.activity);
-    result.cost = path.time;
     return result;
 }
 
