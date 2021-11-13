@@ -1,12 +1,12 @@
-#ifndef ALGOBRUTEFORCE_H
-#define ALGOBRUTEFORCE_H
+#ifndef ALGOANNEALING_H
+#define ALGOANNEALING_H
 
 #include "prepareddata.h"
 
-class AlgoBruteForce
+class AlgoAnnealing
 {
 public:
-    AlgoBruteForce(const prepared::DataStatic ads);
+    AlgoAnnealing(const prepared::DataStatic ads);
 
     prepared::DataDynamic find();
 
@@ -19,4 +19,4 @@ private:
     prepared::DataStatic ds;
 };
 
-#endif // ALGOBRUTEFORCE_H
+#endif // ALGOANNEALING_H

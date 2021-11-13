@@ -74,7 +74,7 @@ class Trac
 {
 public:
     Trac() : limits({}) {}
-    Trac(const raw::Trac &trac, const QVector<raw::Icee> &icees);
+    Trac(const raw::Trac &trac, const QVector<raw::Icee> &icees={});
 
     bool valid() const { return  validData; }
 
@@ -98,6 +98,7 @@ class Handler
 {
 public:
     Handler() {}
+    Handler(const QString &name, int speed, int sensors, int sensorMoney, int shipMoney);
     Handler(const raw::Ship &ship, const raw::SensorMone &sensorMone, const raw::ShipMone &shipMone);
 
     bool valid() const { return  validData; }
@@ -125,6 +126,7 @@ class Shooter
 {
 public:
     Shooter() {}
+    Shooter(const QString &name, int speed, int shipMoney);
     Shooter(const raw::Ship &ship, const raw::ShipMone &shipMone);
 
     bool valid() const { return  validData; }

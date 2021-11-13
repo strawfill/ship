@@ -6,6 +6,7 @@
 #include <QTemporaryFile>
 #include <QDir> // remove me
 
+#include "algoannealing.h"
 #include "algobruteforce.h"
 #include "debugcatcher.h"
 #include "graphicsviewzoomer.h"
@@ -52,7 +53,8 @@ MainWindow::MainWindow(QWidget *parent)
     initActions();
 #if 1
     QMimeData md;
-    md.setUrls(QList<QUrl>() << QUrl{"file:///" + QDir::currentPath() + "/../input/test_brute_force/simple/test.txt"});
+    md.setUrls(QList<QUrl>() << QUrl{"file:///" + QDir::currentPath() + "/../input/simple/10.txt"});
+    //md.setUrls(QList<QUrl>() << QUrl{"file:///" + QDir::currentPath() + "/../input/test_brute_force/simple/test.txt"});
     processMimeData(&md);
 #endif
 }
@@ -239,8 +241,12 @@ void MainWindow::processFile(const QString &filename)
         return;
     }
 #if 1
-    AlgoBruteForce algoBruteForce(ds);
-    dd = algoBruteForce.find();
+#if 0
+    AlgoBruteForce algo(ds);
+#else
+    AlgoAnnealing algo(ds);
+#endif
+    dd = algo.find();
 #endif
 
 

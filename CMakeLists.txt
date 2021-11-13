@@ -13,7 +13,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(BUILD_DIR ${CMAKE_CURRENT_SOURCE_DIR}/bin)
 
-find_package(Qt5 COMPONENTS Widgets Gui REQUIRED)
+find_package(Qt5 COMPONENTS Widgets Gui Concurrent REQUIRED)
 
 include_directories("reader" "other" "viewer" "pathwalk" "viewer/graphicsitems")
 
@@ -52,6 +52,8 @@ set(PATHWALK
     pathwalk/movestopathconverter.cpp
     pathwalk/algobruteforce.h
     pathwalk/algobruteforce.cpp
+    pathwalk/algoannealing.h
+    pathwalk/algoannealing.cpp
     )
 
 set(OTHER
@@ -74,7 +76,7 @@ add_executable(${PROJECT_NAME} WIN32
     ${RESOURCES}
     )
 
-target_link_libraries(${PROJECT_NAME} PRIVATE Qt5::Widgets Qt5::Gui)
+target_link_libraries(${PROJECT_NAME} PRIVATE Qt5::Widgets Qt5::Gui Qt5::Concurrent)
 
 set_target_properties(${PROJECT_NAME} PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${BUILD_DIR}

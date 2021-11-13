@@ -41,6 +41,32 @@ bool MovesToPathConverter::handlerCanPassIt(const std::vector<int> handlerVec) c
     return true;
 }
 
+bool MovesToPathConverter::handlerCanPassIt(const ShipMovesVector &handlerVec) const
+{
+    // не будем пересоздавать его, пусть всегда существует
+    static std::vector<char> passItCheck;
+    passItCheck.resize(handlerVec.size(), 0);
+    int sensors{ handler.sensors() };
+
+    for (unsigned i = 0; i < handlerVec.size(); ++i) {
+        const auto trac{ ds.tracs.at(handlerVec.at(i).tracNum) };
+        char & was = passItCheck.at(unsigned(handlerVec.at(i).tracNum));
+        if (!was) {
+            was = 1;
+            sensors -= trac.sensors();
+            if (sensors < 0) {
+                passItCheck.clear();
+                return false;
+            }
+        }
+        else {
+            was = 0;
+            sensors += trac.sensors();
+        }
+    }
+    return true;
+}
+
 namespace {
 
 struct ProcessTimeData

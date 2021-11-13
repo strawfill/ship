@@ -16,6 +16,13 @@ struct ShipMove
 };
 
 using ShipMovesVector = QVector<ShipMove>;
+struct ShipMoveData
+{
+    ShipMovesVector handler;
+    ShipMovesVector shooter;
+
+    void reserve(int size) { handler.reserve(2*size); shooter.reserve(size); }
+};
 
 
 /**
@@ -51,6 +58,7 @@ public:
     // проверить, не будет ли отрицательное число датчиков на судне согласно заданному маршруту
     // на входе ожидаются номера трасс, строго по два включения номера для каждой трассы
     bool handlerCanPassIt(const std::vector<int> handlerVec) const;
+    bool handlerCanPassIt(const ShipMovesVector &handlerVec) const;
 
     void setShips(const prepared::Handler &ship1, const prepared::Shooter &ship2);
 

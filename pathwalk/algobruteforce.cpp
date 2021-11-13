@@ -4,6 +4,8 @@
 #include "movestopathconverter.h"
 #include <QElapsedTimer>
 
+#include <QtConcurrent>
+
 AlgoBruteForce::AlgoBruteForce(const prepared::DataStatic ads)
     : ds(ads)
 {
@@ -12,6 +14,62 @@ AlgoBruteForce::AlgoBruteForce(const prepared::DataStatic ads)
 
 prepared::DataDynamic AlgoBruteForce::find()
 {
+    double test;
+    return find(test);
+
+    // TO DO TODO
+    QAtomicInt t;
+
+    using AtimicDouble = std::atomic<double>;
+    AtimicDouble d;
+
+
+}
+
+struct TimePath
+{
+    QString path;
+    int time;
+    bool eq;
+
+    bool operator<(const TimePath &other) const
+    { return this->time < other.time; }
+};
+
+QVector<TimePath> tp;
+char helps[5] = {};
+
+QDebug operator<<(QDebug debug, const TimePath &c)
+{
+    QDebugStateSaver saver(debug);
+    debug.nospace().noquote() << "h (" << c.time << ") : (" << c.path << ")"
+                              << " is " << (c.eq ? "unic" : "b");
+
+    return debug;
+}
+
+static ShipMovesVector unic(const ShipMovesVector &init) {
+    static QVector<char> ch;
+    if (ch.size() != init.size()/2)
+        ch.resize(init.size()/2);
+    ShipMovesVector result;
+    result.reserve(init.size()/2);
+    for (const auto & el : init) {
+        if (!ch.at(el.tracNum)) {
+            result.append(el);
+            ch[el.tracNum] = 1;
+        }
+        else {
+            ch[el.tracNum] = 0;
+        }
+    }
+    return result;
+}
+
+prepared::DataDynamic AlgoBruteForce::find(double &progress)
+{
+    tp.clear();
+    tp.reserve(200000);
     QElapsedTimer tm; tm.start();
 
     int varvara{0};
@@ -45,6 +103,22 @@ prepared::DataDynamic AlgoBruteForce::find()
         --tempSize;
     }
 
+    double progressStep;
+    {
+        // TO DO TODO
+        // обнулим всё
+        progress = 0.;
+
+        qlonglong perm{1};
+        int temp{ 2*size };
+        while (temp) {
+            perm *= temp;
+            --temp;
+        }
+
+        progressStep = double(perm) / (1LL << size) / ds.handlers.size() / ds.shooters.size();
+    }
+
     splacesVariants.reserve(permutations);
     {
         std::vector<int> temp;
@@ -64,6 +138,7 @@ prepared::DataDynamic AlgoBruteForce::find()
             for (int i = 0; i < size2; ++i)
                 hplaces.at(i) = i/2;
             do {
+                progress += progressStep;
                 // проверим, что число сенсоров не будет отрицательным - нам такое не нужно
                 if (!converter.handlerCanPassIt(hplaces)) {
                     continue;
@@ -85,6 +160,9 @@ prepared::DataDynamic AlgoBruteForce::find()
 
                     for (int perm = 0; perm < permutations; ++perm) {
                         splaces = splacesVariants.at(perm);
+
+
+
                         // задано всё, кроме выбора направления
                         for (int i = 0; i < size; ++i) {
                             smoves[i] = ShipMove{short(splaces.at(i)), false};
@@ -98,6 +176,43 @@ prepared::DataDynamic AlgoBruteForce::find()
                             }
                             int hours{ converter.calculateHours(hmoves, smoves) };
                             ++varvara;
+
+#if 0
+                            if (hours > 0) {
+                                auto d1 { qDebug().nospace() };
+                                d1 << "H ";
+                                for (const auto & m : qAsConst(hmoves))
+                                    d1 << m.tracNum << (m.isP1Start ? "t" : "f") << " ";
+                                d1 << "; S ";
+                                for (const auto & m : qAsConst(smoves))
+                                    d1 << m.tracNum << (m.isP1Start ? "t" : "f") << " ";
+                                d1 << " = " << hours;
+                            }
+#endif
+#if 0
+                            if (hours > 0) {
+                                QString path;
+                                path += "H ";
+                                for (const auto & m : qAsConst(hmoves))
+                                    path += QString::number(m.tracNum) + (m.isP1Start ? "t" : "f") + " ";
+                                path += "; S ";
+                                for (const auto & m : qAsConst(smoves))
+                                    path += QString::number(m.tracNum) + (m.isP1Start ? "t" : "f") + " ";
+
+
+                                bool un = true;
+                                auto uni = unic(hmoves);
+                                for (int i = 0; i < smoves.size(); ++i) {
+                                    if (uni.at(i).tracNum != smoves.at(i).tracNum) {
+                                        un = false;
+                                        break;
+                                    }
+                                }
+
+
+                                tp.append(TimePath{path, hours, un});
+                            }
+#endif
 
                             if (hours > 0 && hours < time) {
                                 result = converter.createDD(hmoves, smoves);
@@ -120,5 +235,13 @@ prepared::DataDynamic AlgoBruteForce::find()
     qDebug() << "time" << time;
     qDebug() << "cost" << prepared::totalCost(ds, result);
     qDebug() << "speed:" << double(varvara) / elaps;
+
+    if (!tp.isEmpty()) {
+        std::sort(tp.begin(), tp.end());
+        for (int i = 0; i < tp.size(); ++i) {
+            qDebug() << tp.at(i);
+        }
+    }
+
     return result;
 }

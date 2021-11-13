@@ -102,6 +102,15 @@ Trac::Trac(const raw::Trac &trac, const QVector<raw::Icee> &icees)
     sensorCount = qIsNull(distance) ? 1 : qCeil(distance / trac.layoutStep);
 }
 
+Handler::Handler(const QString &name, int speed, int sensors, int sensorMoney, int shipMoney)
+    : nm(name)
+    , spd(speed)
+    , sensorCount(sensors)
+    , dailyCost(qlonglong(sensors) * sensorMoney + shipMoney)
+    , validData(true)
+{
+}
+
 Handler::Handler(const raw::Ship &ship, const raw::SensorMone &sensorMone, const raw::ShipMone &shipMone)
     : nm(ship.name)
     , spd(ship.speed)
@@ -122,6 +131,14 @@ bool Handler::better(const Handler &other) const
 
     bool worse{ spd < other.spd || dailyCost > other.dailyCost };
     return !worse;
+}
+
+Shooter::Shooter(const QString &name, int speed, int shipMoney)
+    : nm(name)
+    , spd(speed)
+    , dailyCost(shipMoney)
+    , validData(true)
+{
 }
 
 Shooter::Shooter(const raw::Ship &ship, const raw::ShipMone &shipMone)
