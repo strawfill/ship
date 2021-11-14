@@ -133,9 +133,9 @@ bool Handler::better(const Handler &other) const
     return !worse;
 }
 
-Shooter::Shooter(const QString &name, int speed, int shipMoney)
+Shooter::Shooter(const QString &name, int speedKmH, int shipMoney)
     : nm(name)
-    , spd(speed)
+    , spd(speedKmH*1000)
     , dailyCost(shipMoney)
     , validData(true)
 {
@@ -143,7 +143,7 @@ Shooter::Shooter(const QString &name, int speed, int shipMoney)
 
 Shooter::Shooter(const raw::Ship &ship, const raw::ShipMone &shipMone)
     : nm(ship.name)
-    , spd(ship.speed)
+    , spd(ship.speed*1000)
     , dailyCost(shipMone.money)
     , validData(true)
 {

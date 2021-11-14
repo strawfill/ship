@@ -24,6 +24,7 @@ struct Trac
 
 struct Ship
 {
+    // км/ч
     int speed;
     QString name;
     int maxSensorCount{ 0 };

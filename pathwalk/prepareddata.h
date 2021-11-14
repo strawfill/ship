@@ -126,7 +126,7 @@ class Shooter
 {
 public:
     Shooter() {}
-    Shooter(const QString &name, int speed, int shipMoney);
+    Shooter(const QString &name, int speedKmH, int shipMoney);
     Shooter(const raw::Ship &ship, const raw::ShipMone &shipMone);
 
     bool valid() const { return  validData; }
@@ -144,6 +144,7 @@ public:
 
 private:
     QString nm;
+    // до этого было в км/ч, теперь в м/ч
     int spd{};
     qlonglong dailyCost{};
     bool validData{ false };

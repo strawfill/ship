@@ -41,10 +41,30 @@ void test()
 
 int main(int argc, char *argv[])
 {
-    //for (int i = 0; i < 900; ++i) {
-    //    qDebug() << qrand()%999 << qrand()%999 << qrand()%999 << qrand()%999 << qrand()%30+20;
-    //}
-    //return 0;
+#if 0
+    int f{250};
+    int d{250};
+    auto val = [=](int m = 1){ return f*m + qrand()%d; };
+    for (int i = 0; i < 1000; ++i) {
+        if (i % 8 == 0)
+            qDebug() << val() << val() << val() << val() << qrand()%30+20;
+        else if (i % 8 == 1)
+            qDebug() << -val() << val() << -val() << val() << qrand()%30+20;
+        else if (i % 8 == 2)
+            qDebug() << val() << -val() << val() << -val() << qrand()%30+20;
+        else if (i % 8 == 3)
+            qDebug() << -val() << -val() << -val() << -val() << qrand()%30+20;
+        else if (i % 8 == 4)
+            qDebug() << val() << val(2) << val(2) << val(2) << qrand()%30+20;
+        else if (i % 8 == 5)
+            qDebug() << -val(2) << val(2) << -val(2) << val(2) << qrand()%30+20;
+        else if (i % 8 == 6)
+            qDebug() << val(2) << -val(2) << val(2) << -val(2) << qrand()%30+20;
+        else if (i % 8 == 7)
+            qDebug() << -val(2) << -val(2) << -val(2) << -val(2) << qrand()%30+20;
+    }
+    return 0;
+#endif
 
     //qsrand(4);
 #ifdef TTT1

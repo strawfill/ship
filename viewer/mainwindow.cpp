@@ -53,7 +53,7 @@ MainWindow::MainWindow(QWidget *parent)
     initActions();
 #if 1
     QMimeData md;
-    md.setUrls(QList<QUrl>() << QUrl{"file:///" + QDir::currentPath() + "/../input/simple/_10.txt"});
+    md.setUrls(QList<QUrl>() << QUrl{"file:///" + QDir::currentPath() + "/../input/simple/_s10.txt"});
     //md.setUrls(QList<QUrl>() << QUrl{"file:///" + QDir::currentPath() + "/../input/test_brute_force/simple/test.txt"});
     processMimeData(&md);
 #endif
