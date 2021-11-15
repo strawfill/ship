@@ -593,7 +593,7 @@ prepared::DataDynamic AlgoAnnealing::find(double &progress)
     }
 #endif
 
-#if 0
+#if 1
     //for (int temperature = 10; temperature; temperature--) {
     for (double temperature = 10; temperature > 0.05; temperature *= 0.8) {
         for (int i = 0; i < 10000; ++i) {

@@ -102,9 +102,9 @@ Trac::Trac(const raw::Trac &trac, const QVector<raw::Icee> &icees)
     sensorCount = qIsNull(distance) ? 1 : qCeil(distance / trac.layoutStep);
 }
 
-Handler::Handler(const QString &name, int speed, int sensors, int sensorMoney, int shipMoney)
+Handler::Handler(const QString &name, int speedKmH, int sensors, int sensorMoney, int shipMoney)
     : nm(name)
-    , spd(speed)
+    , spd(speedKmH*1000)
     , sensorCount(sensors)
     , dailyCost(qlonglong(sensors) * sensorMoney + shipMoney)
     , validData(true)
@@ -113,7 +113,7 @@ Handler::Handler(const QString &name, int speed, int sensors, int sensorMoney, i
 
 Handler::Handler(const raw::Ship &ship, const raw::SensorMone &sensorMone, const raw::ShipMone &shipMone)
     : nm(ship.name)
-    , spd(ship.speed)
+    , spd(ship.speed*1000)
     , sensorCount(ship.maxSensorCount)
     , dailyCost(qlonglong(ship.maxSensorCount) * sensorMone.money() + shipMone.money)
     , validData(true)
@@ -332,17 +332,32 @@ QString DataDynamic::toString() const
     return result;
 }
 
+int totalHours(const DataDynamic &dd)
+{
+    int result{ 0 };
+
+    auto from = [&result](const Path &p) {
+        if (!p.isEmpty() && result < p.last().timeH)
+            result = p.last().timeH;
+    };
+
+    from(dd.pathHandler);
+    from(dd.pathShooter);
+
+    return result;
+}
+
 qlonglong totalCost(const DataStatic &ds, const DataDynamic &dd)
 {
     if (!dd.has)
         return 0LL;
 
-    int maxhour{ qMax(dd.pathHandler.last().timeH, dd.pathShooter.last().timeH) };
-    int days{ qCeil(maxhour / 24.) };
+    int days{ qCeil(totalHours(dd) / 24.) };
 
     return ds.handlerViaName(dd.handlerName).cost(days) +
             ds.shooterViaName(dd.shooterName).cost(days);
 }
+
 
 
 } // end prepared namespace

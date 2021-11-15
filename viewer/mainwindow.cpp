@@ -233,8 +233,10 @@ void MainWindow::processFile(const QString &filename)
 
     ui->plainTextEdit->appendPlainText("-- ошибок не обнаружено");
     if (dd.has) {
-        ui->plainTextEdit->appendPlainText("-- стоимость аренды по маршруту из исходных данных равна " +
-                                           QString::number(prepared::totalCost(ds, dd)));
+        ui->plainTextEdit->appendPlainText(
+                    "-- стоимость аренды по маршруту из исходных данных равна " +
+                    QString::number(prepared::totalCost(ds, dd)) + " [" +
+                    QString::number(prepared::totalHours(dd)) + " ч]");
 
         // отрисуем пустые трассы
         scene->setSources(ds, dd);
@@ -253,8 +255,10 @@ void MainWindow::processFile(const QString &filename)
     scene->setSources(ds, dd);
 
     if (dd.has) {
-        ui->plainTextEdit->appendPlainText("-- стоимость аренды по созданному маршруту равна " +
-                                           QString::number(prepared::totalCost(ds, dd)));
+        ui->plainTextEdit->appendPlainText(
+                    "-- стоимость аренды по созданному маршруту равна " +
+                    QString::number(prepared::totalCost(ds, dd)) + " [" +
+                    QString::number(prepared::totalHours(dd)) + " ч]");
         QFile file("out.txt");
         if (file.open(QIODevice::Text|QIODevice::ReadWrite|QIODevice::Truncate)) {
             QFile origin(filename);

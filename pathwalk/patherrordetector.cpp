@@ -108,23 +108,28 @@ void PathErrorDetector::detectSpeedAndTimeErrorsFor(const QVector<PathDot> &pd, 
             }
         }
         // проверим на превышение скорости
-        const int dx{ cur.x - bef.x };
-        const int dy{ cur.y - bef.y };
-        const int deltaR2{ dx*dx + dy*dy };
-        const int deltaH{ cur.timeH - bef.timeH };
-        const int possibleR{ deltaH * speed };
-        if (possibleR*possibleR < deltaR2) {
+        const qlonglong dx{ cur.x - bef.x };
+        const qlonglong dy{ cur.y - bef.y };
+        const qlonglong deltaR2{ dx*dx + dy*dy };
+        const qlonglong deltaH{ cur.timeH - bef.timeH };
+        const qlonglong possibleR{ deltaH * speed };
+        if (!deltaH && deltaR2) {
+            qWarning() << "В" << formatPath << "судно меняет координаты за нулевое время между записями ("
+                       << bef.x << bef.y << bef.timeH << bef.activity
+                       << ") и (" << cur.x << cur.y << cur.timeH << cur.activity << ")";
+        }
+        else if (possibleR*possibleR < deltaR2) {
             qWarning() << "В" << formatPath << "судном превышена максимальная скорость между записями ("
                        << bef.x << bef.y << bef.timeH << bef.activity
                        << ") и (" << cur.x << cur.y << cur.timeH << cur.activity << ")"
-                       << "допустимое расстояние (" << possibleR << ") между записями же ("
+                       << "корабль может преодолеть (" << possibleR << ") между записями же ("
                        << qSqrt(deltaR2) << "); скорость корабля (" << speed << ")";
         }
 
         // проверим на слишком низкую скорость
-        if (bef.activity != sa_waiting) {
-            const int deltaHless{ deltaH - 1 };
-            const int possibleRless{ deltaHless * speed };
+        if (bef.activity != sa_waiting && deltaH > 0) {
+            const qlonglong deltaHless{ deltaH - 1 };
+            const qlonglong possibleRless{ deltaHless * speed };
             if (possibleRless*possibleRless >= deltaR2) {
                 qWarning() << "В" << formatPath << "между записями ("
                            << bef.x << bef.y << bef.timeH << bef.activity
@@ -209,9 +214,14 @@ void PathErrorDetector::detectProcessingTracErrors() const
         const auto & v{ map.value(line) };
 
         if (v.size() != 3) {
-            qWarning() << "В" << formatPath << "для трассы ("
-                       << trac.p1().x() << trac.p1().y() << trac.p2().x() << trac.p2().y()
-                       << ") ожидалось увидеть 3 взаимодействия с кораблями, но встречено (" << v.size() << ")";
+            QStringList acts;
+            for (const auto &a : qAsConst(v))
+                acts << QString::number(a.first.activity);
+            qWarning().noquote() << "В" << formatPath << "для трассы ("
+                                 << trac.p1().x() << trac.p1().y() << trac.p2().x() << trac.p2().y()
+                                 << ") ожидалось увидеть 3 взаимодействия с кораблями, но встречено ("
+                                 << v.size() << "), это действия ("
+                                 << acts.join(" , ") << ")";
             continue;
         }
 

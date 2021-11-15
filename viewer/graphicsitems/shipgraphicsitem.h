@@ -26,11 +26,11 @@ private:
 
 private:
     prepared::Path mpath;
-    raw::Ship::Type type;
-    QPoint offset;
-    int speed{};
+    double speed{};
+    QPointF offset;
     mutable int rotationAtTracStart{};
     mutable int memoriesIndex{};
+    raw::Ship::Type type;
 };
 
 #endif // SHIPGRAPHICSITEM_H

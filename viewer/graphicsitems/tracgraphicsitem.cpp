@@ -1,12 +1,13 @@
 #include "tracgraphicsitem.h"
 
+#include "distancemodificator.h"
+
 #include <QPen>
 #include <QtMath>
 
-
 TracGraphicsItem::TracGraphicsItem(const prepared::Trac &atrac, const TracActions &acts)
-    : QGraphicsLineItem(atrac.line().p1().x(), -atrac.line().p1().y(),
-                        atrac.line().p2().x(), -atrac.line().p2().y())
+    : QGraphicsLineItem(atrac.line().p1().x() * constants::modifier, -atrac.line().p1().y() * constants::modifier,
+                        atrac.line().p2().x() * constants::modifier, -atrac.line().p2().y() * constants::modifier)
     , trac(atrac)
     , actions(acts)
 {

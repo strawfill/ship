@@ -1,5 +1,7 @@
 #include "shipgraphicsitem.h"
 
+#include "distancemodificator.h"
+
 #include <valarray>
 #include <QtMath>
 #include <QPainter>
@@ -14,9 +16,9 @@ constexpr QSize size{ 8, 26 };
 ShipGraphicsItem::ShipGraphicsItem(raw::Ship::Type atype, int aspeed, const prepared::Path &apath)
     : QGraphicsPathItem(atype == raw::Ship::Type::handler ? handlerPath() : shooterPath())
     , mpath(apath)
-    , type(atype)
-    , offset(size.width()/2, size.height()/2)
     , speed(aspeed)
+    , offset(size.width()/2, size.height()/2)
+    , type(atype)
 {
     setShipPosition(0, 0);
     setRotation(initRotation);
@@ -96,7 +98,9 @@ void ShipGraphicsItem::setShipPosition(double x, double y)
 {
     // не понимаю, почему здесь смещение должно быть по оси y отрицательным
     // очень многое сделано на подборе
-    QPointF current{ QPointF{ x, y } - QPoint{ offset.x(), -offset.y() }  };
+    QPointF current{ x, y };
+    current *=  constants::modifier;
+    current -= QPointF{ offset.x(), -offset.y() };
     if (pos() != current) {
         // система координат конечно немного не та...
         // а делать scale(1, -1) на view - тоже не помогает особо, ведь сторонние эффекты всё портят
@@ -115,9 +119,9 @@ void ShipGraphicsItem::setShipPosition(double x1, double y1, double x2, double y
     //double percent{ qBound(0., (curH - minH) / (maxH-minH), 1.) };
     double dx{ (x2-x1) };
     double dy{ (y2-y1) };
-    double percent{ qBound(0., (curH - minH) * speed / qSqrt(dx*dx + dy*dy), 1.) };
-    dx *= percent;
-    dy *= percent;
+    double part{ qBound(0., (curH - minH) * speed / qSqrt(dx*dx + dy*dy), 1.) };
+    dx *= part;
+    dy *= part;
 
     setShipPosition(x1+dx, y1+dy);
 
@@ -140,8 +144,10 @@ void ShipGraphicsItem::setShipRotation(double rotation, double hourInThatTrac)
 
     int icurrot{ int(this->rotation()) };
 
+    constexpr double rotationTime{ 0.3 };
+
     if (inewrot != icurrot) {
-        if (hourInThatTrac > 1.) {
+        if (hourInThatTrac > rotationTime) {
             setRotation(inewrot);
             update();
             return;
@@ -154,7 +160,7 @@ void ShipGraphicsItem::setShipRotation(double rotation, double hourInThatTrac)
         if (delta > 180)
             delta -= 360;
 
-        double resrot{ rotationAtTracStart + delta * qBound(0., hourInThatTrac, 1.) };
+        double resrot{ rotationAtTracStart + delta * qBound(0., hourInThatTrac / rotationTime, 1.) };
         setRotation(qRound(resrot));
 
         update();

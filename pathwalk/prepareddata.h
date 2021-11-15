@@ -98,7 +98,7 @@ class Handler
 {
 public:
     Handler() {}
-    Handler(const QString &name, int speed, int sensors, int sensorMoney, int shipMoney);
+    Handler(const QString &name, int speedKmH, int sensors, int sensorMoney, int shipMoney);
     Handler(const raw::Ship &ship, const raw::SensorMone &sensorMone, const raw::ShipMone &shipMone);
 
     bool valid() const { return  validData; }
@@ -200,6 +200,8 @@ struct DataDynamic
 
     QString toString() const;
 };
+
+int totalHours(const DataDynamic &dd);
 
 qlonglong totalCost(const DataStatic &ds, const DataDynamic &dd);
 
