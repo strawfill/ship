@@ -143,8 +143,8 @@ void PathErrorDetector::detectSpeedAndTimeErrorsFor(const QVector<PathDot> &pd, 
                            << bef.x << bef.y << bef.timeH << bef.activity
                            << ") и (" << cur.x << cur.y << cur.timeH << cur.activity << ")"
                            << "судно двигалось (" << deltaH
-                           << ") часов, но оно может пройти данное расстояние за ("
-                           << qCeil( qSqrt(deltaR2) / speed) << ") часов; скорость корабля ("
+                           << "ч ), но оно может пройти данное расстояние за ("
+                           << qCeil( qSqrt(deltaR2) / speed) << "ч ); скорость корабля ("
                            << speed << "м/ч )";
             }
         }
