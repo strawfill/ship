@@ -45,6 +45,7 @@ private:
     void warningUnexpectedEndOfFile();
     void warningEmptyString();
     void warningExtraBlock(const char *blockName);
+    void infoNotHaveBlock(const char *blockName);
     void warningNotHaveBlock(const char *blockName);
     void warningOtherBlockStart(const char *otherBlockName);
 
@@ -60,6 +61,10 @@ private:
 
         return ok;
     }
+
+    // проверка текущей линии секции PATH, на что она больше похожа
+    bool pathLikelyShip() const;
+    bool pathLikelyTrac() const;
 
 private:
     raw::Data *data{ nullptr };

@@ -92,6 +92,13 @@ void PathErrorDetector::detectSpeedAndTimeErrorsFor(const QVector<PathDot> &pd, 
     for (int i = 1; i < pd.size(); ++i) {
         const auto & bef{ pd.at(i-1) };
         const auto & cur{ pd.at(i) };
+
+        const qlonglong dx{ cur.x - bef.x };
+        const qlonglong dy{ cur.y - bef.y };
+        const qlonglong deltaR2{ dx*dx + dy*dy };
+        const qlonglong deltaH{ cur.timeH - bef.timeH };
+        const qlonglong possibleR{ deltaH * speed };
+
         // проверим рост времени
         if (cur.timeH < bef.timeH) {
             qWarning() << "В" << formatPath << "ожидалось, что время не будет уменьшаться ("
@@ -99,20 +106,21 @@ void PathErrorDetector::detectSpeedAndTimeErrorsFor(const QVector<PathDot> &pd, 
                        << ") и (" << cur.x << cur.y << cur.timeH << cur.activity << ")";
         }
         // проверим на наличие движения (которого не должно быть) при простое
-        if (bef.activity == sa_waiting) {
-            if (bef.x != cur.x || bef.y != cur.y) {
-                qWarning() << "В" << formatPath << "после записи о простое ("
-                           << bef.x << bef.y << bef.timeH << bef.activity
-                           << ") встречена запись с отличными от предыдущих координатами ("
-                           << cur.x << cur.y << cur.timeH << cur.activity << ")";
-            }
+        if (bef.activity == sa_waiting && (dx || dy)) {
+            qWarning() << "В" << formatPath << "после записи о простое ("
+                       << bef.x << bef.y << bef.timeH << bef.activity
+                       << ") встречена запись с отличными от предыдущих координатами ("
+                       << cur.x << cur.y << cur.timeH << cur.activity << ")";
         }
+        // проверим на простой, который длится 0 часов
+        if (bef.activity == sa_waiting && !deltaH) {
+            qInfo() << "Предупреждение. В" << formatPath
+                    << "встречена запись фиктивного простоя (длится ноль часов) между записями ("
+                    << bef.x << bef.y << bef.timeH << bef.activity << ") и ("
+                    << cur.x << cur.y << cur.timeH << cur.activity << ")";
+        }
+
         // проверим на превышение скорости
-        const qlonglong dx{ cur.x - bef.x };
-        const qlonglong dy{ cur.y - bef.y };
-        const qlonglong deltaR2{ dx*dx + dy*dy };
-        const qlonglong deltaH{ cur.timeH - bef.timeH };
-        const qlonglong possibleR{ deltaH * speed };
         if (!deltaH && deltaR2) {
             qWarning() << "В" << formatPath << "судно меняет координаты за нулевое время между записями ("
                        << bef.x << bef.y << bef.timeH << bef.activity
@@ -123,7 +131,7 @@ void PathErrorDetector::detectSpeedAndTimeErrorsFor(const QVector<PathDot> &pd, 
                        << bef.x << bef.y << bef.timeH << bef.activity
                        << ") и (" << cur.x << cur.y << cur.timeH << cur.activity << ")"
                        << "корабль может преодолеть (" << possibleR << ") между записями же ("
-                       << qSqrt(deltaR2) << "); скорость корабля (" << speed << ")";
+                       << qSqrt(deltaR2) << "); скорость корабля (" << speed << "м/ч )";
         }
 
         // проверим на слишком низкую скорость
@@ -137,7 +145,7 @@ void PathErrorDetector::detectSpeedAndTimeErrorsFor(const QVector<PathDot> &pd, 
                            << "судно двигалось (" << deltaH
                            << ") часов, но оно может пройти данное расстояние за ("
                            << qCeil( qSqrt(deltaR2) / speed) << ") часов; скорость корабля ("
-                           << speed << ")";
+                           << speed << "м/ч )";
             }
         }
     }
@@ -146,7 +154,7 @@ void PathErrorDetector::detectSpeedAndTimeErrorsFor(const QVector<PathDot> &pd, 
 void PathErrorDetector::detectMismatchTracErrors() const
 {
     // поиск ошибок вида:
-    //   данный путь активного действия на самом деле не является существующей трассой
+    //   данный путь активного действия не является существующей трассой
     detectMismatchTracErrorsFor(dd->pathHandler);
     detectMismatchTracErrorsFor(dd->pathShooter);
 }
@@ -176,6 +184,7 @@ void PathErrorDetector::detectProcessingTracErrors() const
     // поиск ошибок вида:
     //   не все трассы пройдены в правильном порядке тремя действиями
     //   действия по обработке одной трассы пересекаются по времени
+    //   действие по обработке трассы происходит в то время, когда она закрыта
 
     // заполним для каждой трассы действия кораблей
     QMap<Line, QVector<QPair<PathDot, PathDot> > > map;
@@ -197,7 +206,7 @@ void PathErrorDetector::detectProcessingTracErrors() const
                     continue;
 
                 // тут нет лишних действий, trac.line() не обязательно равен Line{ bef.x, bef.y, cur.x, cur.y }
-
+                // ведь две точки могут идти в другом порядке
                 auto vector{ map.value(trac.line()) };
                 vector.append({bef, cur});
                 map.insert(trac.line(), vector);
@@ -222,7 +231,6 @@ void PathErrorDetector::detectProcessingTracErrors() const
                                  << ") ожидалось увидеть 3 взаимодействия с кораблями, но встречено ("
                                  << v.size() << "), это действия ("
                                  << acts.join(" , ") << ")";
-            continue;
         }
 
         QSet<int> actions;
@@ -245,6 +253,7 @@ void PathErrorDetector::detectProcessingTracErrors() const
         using TimePair = QPair<int, int>;
         TimePair layout, shooting, collection;
 
+        Q_ASSERT(actions.size() == 3);
         for (int i = 0; i < v.size(); ++i) {
             const auto pair{ v.at(i) };
             if (pair.first.activity == sa_layout)

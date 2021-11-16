@@ -160,7 +160,7 @@ void SourceFileReader::readSourceFile(QString filename)
     if (!wasShip)
         warningNotHaveBlock(formatShip);
     if (!wasIcee)
-        warningNotHaveBlock(formatIcee);
+        infoNotHaveBlock(formatIcee);
 
     in.sourceFile.close();
 }
@@ -375,6 +375,30 @@ void SourceFileReader::readIcee()
     }
 }
 
+bool SourceFileReader::pathLikelyShip() const
+{
+    return in.argSize() == 3 && (in.argRefAt(0) == 'H' || in.argRefAt(0) == 'S');
+}
+
+bool SourceFileReader::pathLikelyTrac() const
+{
+    auto isInt = [](const QStringRef &string) {
+        bool ok;
+        string.toInt(&ok);
+        return ok;
+    };
+
+    if (in.argSize() != 4)
+        return false;
+
+    for (int i = 0; i < in.argSize(); ++i) {
+        if (!isInt(in.argRefAt(i)))
+            return false;
+    }
+    return true;
+}
+
+
 void SourceFileReader::readPath()
 {
     while (true) {
@@ -391,6 +415,13 @@ void SourceFileReader::readPath()
 
         if (in.lineIsEmpty()) {
             warningEmptyString();
+            continue;
+        }
+
+        if (pathLikelyTrac()) {
+            qWarning().noquote() << QString("Строка %1. Выглядит как запись пути корабля, но нет предшествующей записи "
+                                            "о принадлежности к судну")
+                                    .arg(in.strLineNumber());
             continue;
         }
 
@@ -413,15 +444,16 @@ void SourceFileReader::readPath()
             continue;
 
         if (shipPath.size < 1) {
-            qWarning().noquote() << QString("Строка %1. Число записей маршрута корабля %3 должно быть "
-                                            "положительным, но встречено ( %2 )")
-                                    .arg(in.strLineNumber()).arg(shipPath.size).arg(shipPath.name);
+            qWarning().noquote() << QString("Строка %1. Ошибка при чтении строки в %2: Число записей маршрута корабля %3 должно быть "
+                                            "положительным, но встречено ( %4 )")
+                                    .arg(in.strLineNumber()).arg(in.currentFormatString).arg(shipPath.name).arg(shipPath.size);
         }
 
         shipPath.path.reserve(shipPath.size);
 
         // чтение точек для пути корабля
-        for (int i = 0; i < shipPath.size; ++i) {
+        int i = 0;
+        while (true) {
             if (in.fileAtEnd()) {
                 qWarning().noquote() << QString("Строка %1. Ошибка при чтении точки в %2: Встречен конец файла, хотя ожидалось "
                                                 "получить ещё %3 строк для корабля %4")
@@ -449,13 +481,25 @@ void SourceFileReader::readPath()
 
             if (in.lineIsEmpty()) {
                 // мы не должны учитывать пустые строки
-                --i;
                 warningEmptyString();
                 continue;
             }
 
+            if (pathLikelyShip()) {
+                qWarning().noquote() << QString("Строка %1. Ошибка при чтении строки в %2: Встречена запись, похожая "
+                                                "на начало маршрута следующего корабля, но для текущего маршрута "
+                                                "судна %4 ожидалось получить ещё %3 строк. Действие по умолчанию - "
+                                                "начать считывание следующего маршрута. Входная строка ( %5 )")
+                                        .arg(in.strLineNumber()).arg(in.currentFormatString).arg(shipPath.size - i)
+                                        .arg(shipPath.name).arg(in.currentLine);
+                in.reverseReadLine();
+                break;
+            }
+
             if (in.argSize() != 4) {
                 warningArgCount(4);
+
+                ++i;
                 continue;
             }
 
@@ -473,6 +517,27 @@ void SourceFileReader::readPath()
                 continue;
 
             shipPath.path.append(pathDot);
+
+            ++i;
+
+            // мы вышли за границы массива, но вдруг там есть ещё точки?
+            if (i >= shipPath.size) {
+                // проверим следующую строку на корректность
+                in.readLine();
+                if (!pathLikelyTrac()) {
+                    in.reverseReadLine();
+                    // следующая строка не является продолжением
+                    if (i != shipPath.size) {
+                        qWarning().noquote() << QString("Строка ~%1. В %2 для маршрута корабля %3 ожидалось "
+                                                        "встретить %4 точек, но по содержимому файла было получено %5 "
+                                                        "(больше)")
+                                                .arg(in.strLineNumber()).arg(in.currentFormatString).arg(shipPath.name)
+                                                .arg(shipPath.size).arg(i-1);
+                    }
+                    break;
+                }
+                in.reverseReadLine();
+            }
         }
 
         data->path.append(shipPath);
@@ -566,10 +631,16 @@ void SourceFileReader::warningExtraBlock(const char *blockName)
                              .arg(in.strLineNumber()).arg(blockName);
 }
 
-void SourceFileReader::warningNotHaveBlock(const char *blockName)
+void SourceFileReader::infoNotHaveBlock(const char *blockName)
 {
     qInfo().noquote()  << QString("Предупреждение. В файле отсутствует блок данных %1")
                           .arg(blockName);
+}
+
+void SourceFileReader::warningNotHaveBlock(const char *blockName)
+{
+    qWarning().noquote()  << QString("Ошибка: в файле отсутствует обязательный блок данных %1")
+                             .arg(blockName);
 }
 
 void SourceFileReader::warningOtherBlockStart(const char *otherBlockName)
