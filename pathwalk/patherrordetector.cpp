@@ -242,10 +242,11 @@ void PathErrorDetector::detectProcessingTracErrors() const
             QStringList acts;
             for (const auto &a : qAsConst(actions))
                 acts << QString::number(a);
-            qWarning() << "В" << formatPath << "для трассы ("
-                       << trac.p1().x() << trac.p1().y() << trac.p2().x() << trac.p2().y()
-                       << ") ожидалось увидеть раскладку(2), прострел(4) и сбор(3), но встречены только действия ("
-                       << acts.join(" , ") << ")";
+            qWarning().noquote() << "В" << formatPath << "для трассы ("
+                                 << trac.p1().x() << trac.p1().y() << trac.p2().x() << trac.p2().y()
+                                 << ") ожидалось увидеть раскладку(2), прострел(4) и сбор(3), "
+                                    "но встречены только действия ("
+                                 << acts.join(", ") << ")";
             continue;
         }
 
