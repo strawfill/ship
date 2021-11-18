@@ -143,8 +143,8 @@ void PathErrorDetector::detectSpeedAndTimeErrorsFor(const QVector<PathDot> &pd, 
                            << bef.x << bef.y << bef.timeH << bef.activity
                            << ") и (" << cur.x << cur.y << cur.timeH << cur.activity << ")"
                            << "судно двигалось (" << deltaH
-                           << ") часов, но оно может пройти данное расстояние за ("
-                           << qCeil( qSqrt(deltaR2) / speed) << ") часов; скорость корабля ("
+                           << "ч ), но оно может пройти данное расстояние за ("
+                           << qCeil( qSqrt(deltaR2) / speed) << "ч ); скорость корабля ("
                            << speed << "м/ч )";
             }
         }
@@ -242,10 +242,11 @@ void PathErrorDetector::detectProcessingTracErrors() const
             QStringList acts;
             for (const auto &a : qAsConst(actions))
                 acts << QString::number(a);
-            qWarning() << "В" << formatPath << "для трассы ("
-                       << trac.p1().x() << trac.p1().y() << trac.p2().x() << trac.p2().y()
-                       << ") ожидалось увидеть раскладку(2), прострел(4) и сбор(3), но встречены только действия ("
-                       << acts.join(" , ") << ")";
+            qWarning().noquote() << "В" << formatPath << "для трассы ("
+                                 << trac.p1().x() << trac.p1().y() << trac.p2().x() << trac.p2().y()
+                                 << ") ожидалось увидеть раскладку(2), прострел(4) и сбор(3), "
+                                    "но встречены только действия ("
+                                 << acts.join(", ") << ")";
             continue;
         }
 
