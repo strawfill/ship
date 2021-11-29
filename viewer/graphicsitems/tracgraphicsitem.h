@@ -16,7 +16,7 @@ using TracActions = QVector<QPair<int, int> >;
 class TracGraphicsItem : public QGraphicsLineItem, public GraphicsItemInterface
 {
 public:
-    TracGraphicsItem(const prepared::Trac &atrac, const TracActions &acts);
+    TracGraphicsItem(const prepared::Trac &atrac, const TracActions &acts, double amodifier=1.);
 
     void setHour(double hour) override;
 

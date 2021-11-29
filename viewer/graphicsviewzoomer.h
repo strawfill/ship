@@ -26,12 +26,14 @@ public:
     void gentle_zoom(double factor);
     void set_modifiers(Qt::KeyboardModifiers modifiers);
     void set_zoom_factor_base(double value);
+    void set_enable(bool enable=true);
 
 private:
     QGraphicsView* _view;
     Qt::KeyboardModifiers _modifiers;
     double _zoom_factor_base;
     QPointF target_scene_pos, target_viewport_pos;
+    bool enabled{ true };
     bool eventFilter(QObject* object, QEvent* event);
 
 signals:

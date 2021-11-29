@@ -8,11 +8,20 @@
 
 struct ShipMove
 {
-    short tracNum{ 0 };
-    bool isP1Start{ false };
+    ShipMove() {}
+    ShipMove(short tn, bool p1s) : m_tracNum(tn), m_isP1Start(p1s) {}
 
-    QPoint first(const QVector<prepared::Trac> &tracs) const { return isP1Start ? tracs.at(tracNum).p1() : tracs.at(tracNum).p2(); }
-    QPoint second(const QVector<prepared::Trac> &tracs) const { return isP1Start ? tracs.at(tracNum).p2() : tracs.at(tracNum).p1(); }
+    QPoint first(const QVector<prepared::Trac> &tracs) const { return m_isP1Start ? tracs.at(m_tracNum).p1() : tracs.at(m_tracNum).p2(); }
+    QPoint second(const QVector<prepared::Trac> &tracs) const { return m_isP1Start ? tracs.at(m_tracNum).p2() : tracs.at(m_tracNum).p1(); }
+
+    short trac() const { return m_tracNum; }
+    bool isStartP1() const { return m_isP1Start; }
+    void setStartPoint(bool startFromP1) { m_isP1Start = startFromP1; }
+    void reverseStartPoint() { m_isP1Start = !m_isP1Start; }
+
+private:
+    short m_tracNum{ 0 };
+    bool m_isP1Start{ false };
 };
 
 using ShipMovesVector = QVector<ShipMove>;

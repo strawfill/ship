@@ -1,7 +1,5 @@
 #include "shipgraphicsitem.h"
 
-#include "distancemodificator.h"
-
 #include <valarray>
 #include <QtMath>
 #include <QPainter>
@@ -13,10 +11,11 @@ constexpr int initRotation{ 0 };
 constexpr QSize size{ 8, 26 };
 }
 
-ShipGraphicsItem::ShipGraphicsItem(raw::Ship::Type atype, int aspeed, const prepared::Path &apath)
+ShipGraphicsItem::ShipGraphicsItem(raw::Ship::Type atype, int aspeed, const prepared::Path &apath, double amodifier)
     : QGraphicsPathItem(atype == raw::Ship::Type::handler ? handlerPath() : shooterPath())
     , mpath(apath)
     , speed(aspeed)
+    , modifier(amodifier)
     , offset(size.width()/2, size.height()/2)
     , type(atype)
 {
@@ -99,7 +98,7 @@ void ShipGraphicsItem::setShipPosition(double x, double y)
     // не понимаю, почему здесь смещение должно быть по оси y отрицательным
     // очень многое сделано на подборе
     QPointF current{ x, y };
-    current *=  constants::modifier;
+    current *=  modifier;
     current -= QPointF{ offset.x(), -offset.y() };
     if (pos() != current) {
         // система координат конечно немного не та...
@@ -127,14 +126,17 @@ void ShipGraphicsItem::setShipPosition(double x1, double y1, double x2, double y
 
     // а теперь хотелось бы, что бы корабль мог нормально крутиться
 
-    setShipRotation(-std::atan2(y2-y1, x2-x1) * 180 / M_PI, curH - minH);
+    setShipRotation(-std::atan2(y2-y1, x2-x1) * 180 / M_PI, curH - minH, part);
     //qDebug() << "p" << y1 << y2 << x1 << x2 << (-std::atan2(y2-y1, x2-x1) * 180 / M_PI);
 }
 
-void ShipGraphicsItem::setShipRotation(double rotation, double hourInThatTrac)
+void ShipGraphicsItem::setShipRotation(double rotation, double hourInThatTrac, double tracPart)
 {
-    // реализация такая, что в течение первого часа корабль полностью плавно повернётся
-    // на новое направление
+    // реализация такая, что корабль полностью плавно повернётся на новое направление по минимальному условию из
+    //  а) в течение rotationTime часа движения по текущему треку
+    constexpr double rotationTime{ 0.1 };
+    //  б) в течение rotationTracPart части всего пути по текущему треку
+    constexpr double rotationTracPart{ 0.1 };
 
     // какая-то фигня, подбором поставлена
     rotation += 90;
@@ -144,10 +146,9 @@ void ShipGraphicsItem::setShipRotation(double rotation, double hourInThatTrac)
 
     int icurrot{ int(this->rotation()) };
 
-    constexpr double rotationTime{ 0.3 };
 
     if (inewrot != icurrot) {
-        if (hourInThatTrac > rotationTime) {
+        if (hourInThatTrac > rotationTime || tracPart > rotationTracPart) {
             setRotation(inewrot);
             update();
             return;
@@ -160,7 +161,10 @@ void ShipGraphicsItem::setShipRotation(double rotation, double hourInThatTrac)
         if (delta > 180)
             delta -= 360;
 
-        double resrot{ rotationAtTracStart + delta * qBound(0., hourInThatTrac / rotationTime, 1.) };
+        const double condition1{ hourInThatTrac / rotationTime };
+        const double condition2{ tracPart / rotationTracPart };
+
+        double resrot{ rotationAtTracStart + delta * qBound(0., qMax(condition1, condition2), 1.) };
         setRotation(qRound(resrot));
 
         update();

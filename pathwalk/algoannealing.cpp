@@ -44,12 +44,12 @@ static void unic(const ShipMovesVector &init, ShipMovesVector &target) {
     int cur{0};
     for (int i = 0; i < init.size(); ++i) {
         const auto & el{ init.at(i) };
-        if (!ch.at(el.tracNum)) {
+        if (!ch.at(el.trac())) {
             target[cur++] = el;
-            ch[el.tracNum] = 1;
+            ch[el.trac()] = 1;
         }
         else {
-            ch[el.tracNum] = 0;
+            ch[el.trac()] = 0;
         }
     }
 
@@ -87,7 +87,7 @@ bool doChangePlaceMulty(AnnealingData &data, double temperature)
     //qDebug() << "data" << a << b << b-a;
 
     for (int i = a; i < b; ++i)
-        data.hmoves[i].isP1Start = !data.hmoves.at(i).isP1Start;
+        data.hmoves[i].setStartPoint(!data.hmoves.at(i).isStartP1());
     std::reverse(data.hmoves.begin()+a, data.hmoves.begin()+b);
     // действие 1 конец
 
@@ -95,7 +95,7 @@ bool doChangePlaceMulty(AnnealingData &data, double temperature)
         // отменить действие
         std::reverse(data.hmoves.begin()+a, data.hmoves.begin()+b);
         for (int i = a; i < b; ++i)
-            data.hmoves[i].isP1Start = !data.hmoves.at(i).isP1Start;
+            data.hmoves[i].reverseStartPoint();
         return false;
     }
 
@@ -105,7 +105,7 @@ bool doChangePlaceMulty(AnnealingData &data, double temperature)
         // отменить действие
         std::reverse(data.hmoves.begin()+a, data.hmoves.begin()+b);
         for (int i = a; i < b; ++i)
-            data.hmoves[i].isP1Start = !data.hmoves.at(i).isP1Start;
+            data.hmoves[i].reverseStartPoint();
         return false;
     }
 
@@ -121,7 +121,7 @@ bool doChangePlaceMulty(AnnealingData &data, double temperature)
             // отменить действие
             std::reverse(data.hmoves.begin()+a, data.hmoves.begin()+b);
             for (int i = a; i < b; ++i)
-                data.hmoves[i].isP1Start = !data.hmoves.at(i).isP1Start;
+                data.hmoves[i].reverseStartPoint();
             return false;
         }
     }
@@ -173,7 +173,7 @@ bool doChangePlace(AnnealingData &data, double temperature)
 bool doChangeDirection(AnnealingData &data, double temperature, int changeIndex)
 {
     // действие начало
-    data.hmoves[changeIndex].isP1Start = !data.hmoves[changeIndex].isP1Start;
+    data.hmoves[changeIndex].reverseStartPoint();
     // действие конец
 
     unic(data.hmoves, data.smoves);
@@ -189,7 +189,7 @@ bool doChangeDirection(AnnealingData &data, double temperature, int changeIndex)
         // удача не прошла
         if (qrand()%100 > p*100) {
             // отменить действие
-            data.hmoves[changeIndex].isP1Start = !data.hmoves[changeIndex].isP1Start;
+            data.hmoves[changeIndex].reverseStartPoint();
             return false;
         }
     }
@@ -216,7 +216,7 @@ void doChangeInitialInOp(AnnealingData &data)
 
     // протестируем новое начало
     for (short i = 0; i < size2; ++i)
-        data.hmoves[i] = ShipMove{data.smoves.at(i/2).tracNum, bool(qrand()%2)};
+        data.hmoves[i] = ShipMove{data.smoves.at(i/2).trac(), bool(qrand()%2)};
 
 #if 1
     for (int temp = 10; temp > 1; --temp) {
@@ -538,7 +538,7 @@ CompactSets::Data findCompactSets(const QVector<prepared::Trac> &tracs)
 prepared::DataDynamic AlgoAnnealing::find(double &progress)
 {
     QElapsedTimer tm; tm.start(); int s0{}, s1{}, s2{};
-
+#if 0
     // значит трассы находятся относительно далеко друг от друга
     qDebug() << "tracCrowding" << tracCrowding(ds.tracs);
     if (tracCrowding(ds.tracs) > 1.5) {
@@ -554,6 +554,7 @@ prepared::DataDynamic AlgoAnnealing::find(double &progress)
         }
         ds.tracs = tracs;
     }
+#endif
 
     int varvara{0};
     int time = INT_MAX;
@@ -594,6 +595,7 @@ prepared::DataDynamic AlgoAnnealing::find(double &progress)
 #endif
 
 #if 1
+#if 0
     //for (int temperature = 10; temperature; temperature--) {
     for (double temperature = 10; temperature > 0.05; temperature *= 0.8) {
         for (int i = 0; i < 10000; ++i) {
@@ -603,8 +605,9 @@ prepared::DataDynamic AlgoAnnealing::find(double &progress)
         // будем идти от оптимального на цикле
         data.hmoves = data.opthmoves;
     }
+#endif
     for (double temperature = 10; temperature > 0.05; temperature *= 0.8) {
-        for (int i = 0; i < 10000; ++i) {
+        for (int i = 0; i < 100000; ++i) {
             ++varvara;
             doChangePlace(data, temperature);
             doChangeDirection(data, temperature);

@@ -9,6 +9,7 @@
 #include "algoannealing.h"
 #include "algobruteforce.h"
 #include "debugcatcher.h"
+#include "graphicsitemzoomer.h"
 #include "graphicsviewzoomer.h"
 #include "prepareddata.h"
 #include "patherrordetector.h"
@@ -44,16 +45,19 @@ MainWindow::MainWindow(QWidget *parent)
     connect(scene, &SimulationScene::simulationTimeChanged, ui->label_time, &QLabel::setText);
 
     ui->graphicsView->setScene(scene->getScene());
-
-    new GraphicsViewZoomer(ui->graphicsView);
+    viewZoomer = new GraphicsViewZoomer(ui->graphicsView);
+    viewZoomer->set_enable(false);
+    itemZoomer = new GraphicsItemZoomer(ui->graphicsView);
+    connect(itemZoomer, &GraphicsItemZoomer::zoomRequested, scene, &SimulationScene::zoomSimulation);
 
     loadSettings();
     setStartPauseButtonPixmap(false);
 
     initActions();
-#if 1
+#if 0
     QMimeData md;
-    md.setUrls(QList<QUrl>() << QUrl{"file:///" + QDir::currentPath() + "/../input/simple/_s10.txt"});
+    md.setUrls(QList<QUrl>() << QUrl{"file:///" + QDir::currentPath() + "/../input/simple.m/8.txt"});
+    //md.setUrls(QList<QUrl>() << QUrl{"file:///" + QDir::currentPath() + "/../input/simple/_s10.txt"});
     //md.setUrls(QList<QUrl>() << QUrl{"file:///" + QDir::currentPath() + "/../input/test_brute_force/simple/test.txt"});
     processMimeData(&md);
 #endif
@@ -147,6 +151,17 @@ void MainWindow::dropEvent(QDropEvent *event)
     processMimeData(event->mimeData());
 }
 
+void MainWindow::wheelEvent(QWheelEvent *event)
+{
+    if (event->buttons() == Qt::NoButton && event->modifiers() == (Qt::ShiftModifier|Qt::ControlModifier)) {
+        event->accept();
+        qDebug() << "ok";
+        return;
+    }
+
+    return QMainWindow::wheelEvent(event);
+}
+
 bool MainWindow::hasGoodFormat(const QMimeData *data)
 {
     if (!data)
@@ -174,6 +189,7 @@ void MainWindow::processMimeData(const QMimeData *data)
 {
     scene->clear();
     ui->graphicsView->setDragMode(QGraphicsView::NoDrag);
+    viewZoomer->set_enable(false);
 
     if (!data)
         return;
@@ -230,6 +246,7 @@ void MainWindow::processFile(const QString &filename)
     }
     // разрешим перетягивание
     ui->graphicsView->setDragMode(QGraphicsView::ScrollHandDrag);
+    viewZoomer->set_enable(true);
 
     ui->plainTextEdit->appendPlainText("-- ошибок не обнаружено");
     if (dd.has) {

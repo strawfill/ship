@@ -41,11 +41,14 @@ public slots:
     void stopSimulation();
     void setSimulationSpeed(double hoursInSec);
 
+    void zoomSimulation(double factor);
+
 private:
     void initSceneItems();
     void updateScene();
     void resetTime();
 
+    void calculateInitZoomFactor();
     void calculateEndSimulationTime();
 
     void emitSimulationTimeChanged();
@@ -62,6 +65,7 @@ private:
     double hourBase{ 0 };
     QElapsedTimer eltimer;
     double speed{ 1 };
+    double distanceModifier{ 1 };
 
     int endSimulationTime{ 0 };
     bool runAfterEnd{ false };

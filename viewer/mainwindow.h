@@ -9,6 +9,8 @@ QT_END_NAMESPACE
 
 class QMimeData;
 class SimulationScene;
+class GraphicsItemZoomer;
+class GraphicsViewZoomer;
 
 class MainWindow : public QMainWindow
 {
@@ -22,6 +24,7 @@ public:
 protected:
     void dragEnterEvent(QDragEnterEvent *event) override;
     void dropEvent(QDropEvent *event) override;
+    void wheelEvent(QWheelEvent *event) override;
 
 private:
     bool hasGoodFormat(const QMimeData *data);
@@ -40,7 +43,10 @@ private slots:
 private:
     Ui::MainWindow *ui;
     SimulationScene *scene{ nullptr };
+    GraphicsItemZoomer *itemZoomer{ nullptr };
+    GraphicsViewZoomer *viewZoomer{ nullptr };
 
     QString fileData;
+
 };
 #endif // MAINWINDOW_H

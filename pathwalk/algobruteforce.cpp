@@ -55,12 +55,12 @@ static ShipMovesVector unic(const ShipMovesVector &init) {
     ShipMovesVector result;
     result.reserve(init.size()/2);
     for (const auto & el : init) {
-        if (!ch.at(el.tracNum)) {
+        if (!ch.at(el.trac())) {
             result.append(el);
-            ch[el.tracNum] = 1;
+            ch[el.trac()] = 1;
         }
         else {
-            ch[el.tracNum] = 0;
+            ch[el.trac()] = 0;
         }
     }
     return result;
@@ -152,7 +152,7 @@ prepared::DataDynamic AlgoBruteForce::find(double &progress)
                 for (int p = 0; p < to; ++p) {
                     // здесь уже все варианты раскладчиков учитаны, теперь нужно добавить варианты шутеров
                     for (int i = 0; i < size2; ++i) {
-                        hmoves[i].isP1Start = p & (1<<i);
+                        hmoves[i].setStartPoint(p & (1<<i));
                     }
 
                     for (int i = 0; i < size; ++i)
@@ -172,7 +172,7 @@ prepared::DataDynamic AlgoBruteForce::find(double &progress)
                             // здесь уже вообще всё учитано
                             // но вложенность 4 цикла...
                             for (int i = 0; i < size; ++i) {
-                                smoves[i].isP1Start = p & (1<<i);
+                                smoves[i].setStartPoint(p & (1<<i));
                             }
                             int hours{ converter.calculateHours(hmoves, smoves) };
                             ++varvara;
@@ -182,10 +182,10 @@ prepared::DataDynamic AlgoBruteForce::find(double &progress)
                                 auto d1 { qDebug().nospace() };
                                 d1 << "H ";
                                 for (const auto & m : qAsConst(hmoves))
-                                    d1 << m.tracNum << (m.isP1Start ? "t" : "f") << " ";
+                                    d1 << m.trac() << (m.isP1Start ? "t" : "f") << " ";
                                 d1 << "; S ";
                                 for (const auto & m : qAsConst(smoves))
-                                    d1 << m.tracNum << (m.isP1Start ? "t" : "f") << " ";
+                                    d1 << m.trac() << (m.isP1Start ? "t" : "f") << " ";
                                 d1 << " = " << hours;
                             }
 #endif
@@ -194,16 +194,16 @@ prepared::DataDynamic AlgoBruteForce::find(double &progress)
                                 QString path;
                                 path += "H ";
                                 for (const auto & m : qAsConst(hmoves))
-                                    path += QString::number(m.tracNum) + (m.isP1Start ? "t" : "f") + " ";
+                                    path += QString::number(m.trac()) + (m.isP1Start ? "t" : "f") + " ";
                                 path += "; S ";
                                 for (const auto & m : qAsConst(smoves))
-                                    path += QString::number(m.tracNum) + (m.isP1Start ? "t" : "f") + " ";
+                                    path += QString::number(m.trac()) + (m.isP1Start ? "t" : "f") + " ";
 
 
                                 bool un = true;
                                 auto uni = unic(hmoves);
                                 for (int i = 0; i < smoves.size(); ++i) {
-                                    if (uni.at(i).tracNum != smoves.at(i).tracNum) {
+                                    if (uni.at(i).trac() != smoves.at(i).trac()) {
                                         un = false;
                                         break;
                                     }

@@ -7,6 +7,7 @@
 #include <QGraphicsScene>
 #include <QKeySequence>
 #include <QTimer>
+#include <QtMath>
 
 using namespace prepared;
 
@@ -17,8 +18,16 @@ struct SimulationData
     DataDynamic dd;
 
     QVector<TracGraphicsItem *> tracs;
-    ShipGraphicsItem *handler;
-    ShipGraphicsItem *shooter;
+    ShipGraphicsItem *handler{ nullptr };
+    ShipGraphicsItem *shooter{ nullptr };
+
+    void clearItems() {
+        delete handler;
+        handler = nullptr;
+        delete shooter;
+        shooter = nullptr;
+        tracs.clear();
+    }
 };
 
 
@@ -49,6 +58,7 @@ void SimulationScene::setSources(const prepared::DataStatic &staticData, const p
     data->ds = staticData;
     data->dd = dynamicData;
     calculateEndSimulationTime();
+    calculateInitZoomFactor();
     initSceneItems();
 
     // и сразу зададим нулевой час, чтобы элементы корректно отображались
@@ -122,6 +132,16 @@ void SimulationScene::setSimulationSpeed(double hoursInSec)
     hourBase = hour;
     eltimer.restart();
     speed = hoursInSec;
+}
+
+void SimulationScene::zoomSimulation(double factor)
+{
+    if (qFuzzyCompare(1., factor))
+        return;
+
+    distanceModifier *= factor;
+    initSceneItems();
+    updateScene();
 }
 
 void SimulationScene::timerTicked()
@@ -221,7 +241,7 @@ void SimulationScene::initSceneItems()
     if (!data)
         return;
 
-    // уберём плейсхолдер
+    data->clearItems();
     scene->clear();
 
     // чтобы начало координат было
@@ -230,27 +250,29 @@ void SimulationScene::initSceneItems()
 
     auto map{ getTracToPathMap(data->ds, data->dd) };
 
+
     data->tracs.reserve(data->ds.tracs.size());
     for (const auto & t : qAsConst(data->ds.tracs)) {
-        auto item{ new TracGraphicsItem(t, getActionTimesForLine(t.line(), map)) };
+        auto item{ new TracGraphicsItem(t, getActionTimesForLine(t.line(), map), distanceModifier) };
         scene->addItem(item);
         data->tracs.append(item);
     }
 
     data->handler = new ShipGraphicsItem(raw::Ship::Type::handler,
                                          data->ds.handlerViaName(data->dd.handlerName).speed(),
-                                         data->dd.pathHandler);
+                                         data->dd.pathHandler, distanceModifier);
     scene->addItem(data->handler);
 
     data->shooter = new ShipGraphicsItem(raw::Ship::Type::shooter,
                                          data->ds.shooterViaName(data->dd.shooterName).speed(),
-                                         data->dd.pathShooter);
+                                         data->dd.pathShooter, distanceModifier);
     scene->addItem(data->shooter);
 
     QRectF rect{-200, -200, 400, 400};
     rect |= scene->itemsBoundingRect().translated(100, 100);
     rect |= scene->itemsBoundingRect().translated(-100, -100);
     scene->setSceneRect(rect);
+
 }
 
 void SimulationScene::updateScene()
@@ -272,6 +294,20 @@ void SimulationScene::resetTime()
     eltimer.restart();
     // это значит, что конец ещё не настал и при его преодолении стоит остановиться
     runAfterEnd = false;
+}
+
+void SimulationScene::calculateInitZoomFactor()
+{
+    if (!data)
+        return;
+
+    QRectF rect;
+    for (const auto &trac : qAsConst(data->ds.tracs)) {
+        rect |= QRect(trac.p1(), trac.p2());
+    }
+
+    double raw{ qMax(1., qMax(rect.width(), rect.height())) };
+    distanceModifier = 500 / raw;
 }
 
 void SimulationScene::calculateEndSimulationTime()

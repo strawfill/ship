@@ -49,8 +49,8 @@ bool MovesToPathConverter::handlerCanPassIt(const ShipMovesVector &handlerVec) c
     int sensors{ handler.sensors() };
 
     for (unsigned i = 0; i < handlerVec.size(); ++i) {
-        const auto trac{ ds.tracs.at(handlerVec.at(i).tracNum) };
-        char & was = passItCheck.at(unsigned(handlerVec.at(i).tracNum));
+        const auto trac{ ds.tracs.at(handlerVec.at(i).trac()) };
+        char & was = passItCheck.at(unsigned(handlerVec.at(i).trac()));
         if (!was) {
             was = 1;
             sensors -= trac.sensors();
@@ -89,7 +89,7 @@ struct ProcessTimeData
     void addGoHome()
     {
         if (!pos.isNull()) {
-            hour += qCeil(qSqrt(pos.x()*pos.x() + pos.y()*pos.y()) / speed);
+            hour += qCeil(qSqrt(qlonglong(pos.x())*pos.x() + qlonglong(pos.y()*pos.y())) / speed);
         }
     }
 
@@ -103,7 +103,7 @@ bool processTime(ProcessTimeData &data)
         if (data.index >= data.moves.size())
             break;
         const auto input{ data.moves.at(data.index) };
-        char & calls = data.lineState[input.tracNum];
+        char & calls = data.lineState[input.trac()];
         if (data.isHandler && calls == 1) {
             break;
         }
@@ -112,18 +112,18 @@ bool processTime(ProcessTimeData &data)
         }
         processed = true;
 
-        const auto trac{ data.ds.tracs.at(input.tracNum) };
+        const auto trac{ data.ds.tracs.at(input.trac()) };
         const auto p1{ input.first(data.ds.tracs) };
         const auto p2{ input.second(data.ds.tracs) };
         // сначала нужно добраться
         if (data.pos != p1) {
             QPoint d{ data.pos - p1 };
-            data.hour += qCeil(qSqrt(d.x()*d.x() + d.y()*d.y()) / data.speed);
+            data.hour += qCeil(qSqrt(qlonglong(d.x())*d.x() + qlonglong(d.y()*d.y())) / data.speed);
             data.pos = p1;
         }
 
         // теперь нужно подождать, когда отработает другое судно и/или откроется трасса
-        int &hourToOther = data.lineStateChanged.at(input.tracNum);
+        int &hourToOther = data.lineStateChanged.at(input.trac());
         if (hourToOther > data.hour)
             data.hour = hourToOther;
         int hourToOpen{ trac.nearAvailable(data.hour, qCeil(trac.dist() / data.speed)) };
@@ -215,7 +215,7 @@ struct ProcessPathData
     {
         if (!pos.isNull()) {
             addAction(prepared::sa_movement);
-            hour += qCeil(qSqrt(pos.x()*pos.x() + pos.y()*pos.y()) / speed);
+            hour += qCeil(qSqrt(qlonglong(pos.x())*pos.x() + qlonglong(pos.y())*pos.y()) / speed);
             pos = QPoint{};
         }
         addAction(prepared::sa_waiting);
@@ -231,7 +231,7 @@ bool processPath(ProcessPathData &data)
         if (data.index >= data.moves.size())
             break;
         const auto input{ data.moves.at(data.index) };
-        char & calls = data.lineState[input.tracNum];
+        char & calls = data.lineState[input.trac()];
         if (data.isHandler && calls == 1) {
             break;
         }
@@ -240,18 +240,18 @@ bool processPath(ProcessPathData &data)
         }
         processed = true;
 
-        const auto trac{ data.ds.tracs.at(input.tracNum) };
+        const auto trac{ data.ds.tracs.at(input.trac()) };
         const auto p1{ input.first(data.ds.tracs) };
         const auto p2{ input.second(data.ds.tracs) };
         // сначала нужно добраться
         if (data.pos != p1) {
             data.addAction(prepared::sa_movement);
             QPoint d{ data.pos - p1 };
-            data.hour += qCeil(qSqrt(d.x()*d.x() + d.y()*d.y()) / data.speed);
+            data.hour += qCeil(qSqrt(qlonglong(d.x())*d.x() + qlonglong(d.y())*d.y()) / data.speed);
             data.pos = p1;
         }
         // теперь нужно подождать, когда отработает другое судно и/или откроется трасса
-        int &hourToOther = data.lineStateChanged.at(input.tracNum);
+        int &hourToOther = data.lineStateChanged.at(input.trac());
         int t1{ qMax(data.hour, hourToOther) };
         int t2{ qMax(t1, trac.nearAvailable(t1, qCeil(trac.dist() / data.speed))) };
         if (t2 > data.hour) {

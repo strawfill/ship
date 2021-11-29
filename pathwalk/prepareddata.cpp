@@ -98,7 +98,7 @@ Trac::Trac(const raw::Trac &trac, const QVector<raw::Icee> &icees)
     , limits(icees)
     , validData(true)
 {
-    distance = qSqrt(ln.dx()*ln.dx() + ln.dy()*ln.dy());
+    distance = qSqrt(qlonglong(ln.dx())*ln.dx() + qlonglong(ln.dy())*ln.dy());
     sensorCount = qIsNull(distance) ? 1 : qCeil(distance / trac.layoutStep);
 }
 

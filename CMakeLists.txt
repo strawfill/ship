@@ -25,9 +25,10 @@ set(VIEWER
     viewer/simulationscene.cpp
     viewer/ignoredndgraphicsview.h
     viewer/ignoredndgraphicsview.cpp
+    viewer/graphicsitemzoomer.h
+    viewer/graphicsitemzoomer.cpp
     viewer/graphicsviewzoomer.h
     viewer/graphicsviewzoomer.cpp
-    viewer/graphicsitems/distancemodificator.h
     viewer/graphicsitems/graphicsiteminterface.h
     viewer/graphicsitems/tracgraphicsitem.h
     viewer/graphicsitems/tracgraphicsitem.cpp

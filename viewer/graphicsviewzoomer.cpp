@@ -11,7 +11,7 @@ GraphicsViewZoomer::GraphicsViewZoomer(QGraphicsView* view)
   : QObject(view), _view(view)
 {
   _view->viewport()->installEventFilter(this);
-  _view->setMouseTracking(true);
+  //_view->setMouseTracking(true);
   _modifiers = Qt::ControlModifier;
   _zoom_factor_base = 1.0015;
 }
@@ -34,11 +34,19 @@ void GraphicsViewZoomer::set_modifiers(Qt::KeyboardModifiers modifiers)
 
 void GraphicsViewZoomer::set_zoom_factor_base(double value)
 {
-  _zoom_factor_base = value;
+    _zoom_factor_base = value;
+}
+
+void GraphicsViewZoomer::set_enable(bool enable)
+{
+    enabled = enable;
 }
 
 bool GraphicsViewZoomer::eventFilter(QObject *object, QEvent *event)
 {
+  if (!enabled)
+      return false;
+
   if (event->type() == QEvent::MouseMove) {
     QMouseEvent* mouse_event = static_cast<QMouseEvent*>(event);
     QPointF delta = target_viewport_pos - mouse_event->pos();

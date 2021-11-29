@@ -17,10 +17,10 @@
 int main(int argc, char *argv[])
 {
 #if 0
-    int f{250};
-    int d{250};
+    int f{25000};
+    int d{25000};
     auto val = [=](int m = 1){ return f*m + qrand()%d; };
-    for (int i = 0; i < 1000; ++i) {
+    for (int i = 0; i < 8; ++i) {
         if (i % 8 == 0)
             qDebug() << val() << val() << val() << val() << qrand()%30+20;
         else if (i % 8 == 1)
