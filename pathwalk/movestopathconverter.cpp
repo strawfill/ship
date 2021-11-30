@@ -45,10 +45,10 @@ bool MovesToPathConverter::handlerCanPassIt(const ShipMovesVector &handlerVec) c
 {
     // не будем пересоздавать его, пусть всегда существует
     static std::vector<char> passItCheck;
-    passItCheck.resize(handlerVec.size(), 0);
+    passItCheck.resize(unsigned(handlerVec.size()), 0);
     int sensors{ handler.sensors() };
 
-    for (unsigned i = 0; i < handlerVec.size(); ++i) {
+    for (int i = 0; i < handlerVec.size(); ++i) {
         const auto trac{ ds.tracs.at(handlerVec.at(i).trac()) };
         char & was = passItCheck.at(unsigned(handlerVec.at(i).trac()));
         if (!was) {
@@ -89,7 +89,7 @@ struct ProcessTimeData
     void addGoHome()
     {
         if (!pos.isNull()) {
-            hour += qCeil(qSqrt(qlonglong(pos.x())*pos.x() + qlonglong(pos.y()*pos.y())) / speed);
+            hour += qCeil(qSqrt(qlonglong(pos.x())*pos.x() + qlonglong(pos.y())*pos.y()) / speed);
         }
     }
 
@@ -118,7 +118,7 @@ bool processTime(ProcessTimeData &data)
         // сначала нужно добраться
         if (data.pos != p1) {
             QPoint d{ data.pos - p1 };
-            data.hour += qCeil(qSqrt(qlonglong(d.x())*d.x() + qlonglong(d.y()*d.y())) / data.speed);
+            data.hour += qCeil(qSqrt(qlonglong(d.x())*d.x() + qlonglong(d.y())*d.y()) / data.speed);
             data.pos = p1;
         }
 
@@ -183,6 +183,11 @@ int MovesToPathConverter::calculateHours(const ShipMovesVector &handlerVec, cons
     handler.addGoHome();
     shooter.addGoHome();
 
+    if (qMax(shooter.hour, handler.hour) < 100) {
+        qDebug() << "Пипец" << qMax(shooter.hour, handler.hour);
+        calculateHours(handlerVec, shooterVec);
+    }
+
     return qMax(shooter.hour, handler.hour);
 }
 
@@ -209,7 +214,7 @@ struct ProcessPathData
     void addAction(int act)
     {
         path.append({pos.x(), pos.y(), hour, act});
-    };
+    }
 
     void addGoHome()
     {

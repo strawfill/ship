@@ -64,7 +64,52 @@ struct AnnealingData
     ShipMovesVector &opthmoves;
     ShipMovesVector &hmoves;
     ShipMovesVector &smoves;
-    int time{};
+    int opttime{INT_MAX};
+    int time{INT_MAX};
+
+    void initOpt()
+    {
+        opthmoves = hmoves;
+        opttime = time;
+    }
+    void fromOpt()
+    {
+        hmoves = opthmoves;
+        time = opttime;
+    }
+    void tryToOpt()
+    {
+        if (time < opttime) {
+            initOpt();
+        }
+    }
+    void updateSmoves()
+    {
+        unic(hmoves, smoves);
+    }
+    int calculateHoursWithoutChangeOrder()
+    {
+        int result{ converter.calculateHours(hmoves, smoves) };
+        //if (result < 100) {
+        //    qDebug().noquote() << "BAD" << result << ":\n" << converter.createDD(hmoves, smoves).toString();
+        //}
+        if (result > 0) {
+            time = result;
+            tryToOpt();
+        }
+        return result;
+    }
+    int calculateHours()
+    {
+        updateSmoves();
+        return calculateHoursWithoutChangeOrder();
+    }
+    prepared::DataDynamic getDD()
+    {
+        fromOpt();
+        updateSmoves();
+        return converter.createDD(hmoves, smoves);
+    }
 };
 
 
@@ -100,8 +145,8 @@ bool doChangePlaceMulty(AnnealingData &data, double temperature)
         return false;
     }
 
-    unic(data.hmoves, data.smoves);
-    int timeNow = data.converter.calculateHours(data.hmoves, data.smoves);
+    int timeBef = data.time;
+    int timeNow = data.calculateHours();
     if (timeNow <= 0) {
         // отменить действие
         std::reverse(data.hmoves.begin()+a, data.hmoves.begin()+b);
@@ -110,11 +155,7 @@ bool doChangePlaceMulty(AnnealingData &data, double temperature)
         return false;
     }
 
-    if (timeNow < data.time) {
-        data.opthmoves = data.hmoves;
-    }
-
-    if (timeNow > data.time) {
+    if (timeNow > timeBef) {
         // p - вероятность удачи
         double p = qExp(-(timeNow-data.time)/temperature);
         // удача не прошла
@@ -126,7 +167,7 @@ bool doChangePlaceMulty(AnnealingData &data, double temperature)
             return false;
         }
     }
-    data.time = timeNow;
+    data.tryToOpt();
     return true;
 }
 
@@ -145,19 +186,14 @@ bool doChangePlace(AnnealingData &data, double temperature, int a, int b)
         return false;
     }
 
-    unic(data.hmoves, data.smoves);
-    int timeNow = data.converter.calculateHours(data.hmoves, data.smoves);
+    int timeBef = data.time;
+    int timeNow = data.calculateHours();
     if (timeNow <= 0) {
         // отменить действие
         std::swap(data.hmoves[a], data.hmoves[b]);
         return false;
     }
-
-    if (timeNow < data.time) {
-        data.opthmoves = data.hmoves;
-    }
-
-    if (timeNow > data.time) {
+    if (timeNow > timeBef) {
         // p - вероятность удачи
         double p = qExp(-(timeNow-data.time)/temperature);
         // удача не прошла
@@ -167,7 +203,7 @@ bool doChangePlace(AnnealingData &data, double temperature, int a, int b)
             return false;
         }
     }
-    data.time = timeNow;
+    data.tryToOpt();
     return true;
 }
 
@@ -184,14 +220,10 @@ bool doChangeDirection(AnnealingData &data, double temperature, int changeIndex)
     data.hmoves[changeIndex].reverseStartPoint();
     // действие конец
 
-    unic(data.hmoves, data.smoves);
-    int timeNow = data.converter.calculateHours(data.hmoves, data.smoves);
+    int timeBef = data.time;
+    int timeNow = data.calculateHoursWithoutChangeOrder();
 
-    if (timeNow < data.time) {
-        data.opthmoves = data.hmoves;
-    }
-
-    if (timeNow > data.time) {
+    if (timeNow > timeBef) {
         // p - вероятность удачи
         double p = qExp(-(timeNow-data.time)/temperature);
         // удача не прошла
@@ -201,7 +233,7 @@ bool doChangeDirection(AnnealingData &data, double temperature, int changeIndex)
             return false;
         }
     }
-    data.time = timeNow;
+    data.tryToOpt();
     return true;
 }
 
@@ -210,74 +242,20 @@ inline bool doChangeDirection(AnnealingData &data, double temperature)
     return doChangeDirection(data, temperature, qrand() % data.hmoves.size());
 }
 
-void doChangeInitialInOp(AnnealingData &data)
-{
-    const int size2{ data.hmoves.size() };
-    const int size{ size2 / 2 };
-
-    // перемешаем трассы, чтобы получить новое начальное размещение трасс
-    for (short i = 0; i < size; ++i)
-        data.smoves[i] = ShipMove{short(i), false};
-
-    for (int i = 0; i < size; ++i)
-        std::swap(data.smoves[i], data.smoves[qrand() % size]);
-
-    // протестируем новое начало
-    for (short i = 0; i < size2; ++i)
-        data.hmoves[i] = ShipMove{data.smoves.at(i/2).trac(), bool(qrand()%2)};
-
-#if 1
-    for (int temp = 10; temp > 1; --temp) {
-        for (int i = 0; i < size2; ++i) {
-            doChangeDirection(data, temp / 2, i);
-        }
-    }
-#endif
-
-    int timeNow = data.converter.calculateHours(data.hmoves, data.smoves);
-
-    if (timeNow < data.time) {
-        data.opthmoves = data.hmoves;
-    }
-
-    data.time = timeNow;
-
-}
-
 
 } // end anonymous namespace
 
 prepared::DataDynamic AlgoAnnealing::find(double &progress)
 {
     QElapsedTimer tm; tm.start(); int s0{}, s1{}, s2{};
-#if 0
-    // значит трассы находятся относительно далеко друг от друга
-    qDebug() << "tracCrowding" << tracCrowding(ds.tracs);
-    if (tracCrowding(ds.tracs) > 1.5) {
-        auto sets{ findCompactSets(ds.tracs) };
-        qDebug() << "d" << sets.size() <<  tm.elapsed() << "ms";
-        //return {};
-
-        QVector<prepared::Trac> tracs;
-        tracs.reserve(ds.tracs.size());
-        for (int i = 0; i < sets.size(); ++i) {
-            for (int k = 0; k < sets.at(i).size(); ++k)
-                tracs.append(ds.tracs.at(sets.at(i).at(k)));
-        }
-        ds.tracs = tracs;
-    }
-#endif
 
     int varvara{0};
-    int time = INT_MAX;
     prepared::DataDynamic result;
 
     int size{ ds.tracs.size() };
     int size2{ 2*size };
 
-    QElapsedTimer timer; timer.start();
     const auto tracsCrowded = sortViaCrowding(ds.tracs);
-    qDebug() << "timer" << timer.nsecsElapsed() / 1e6 << "ms";
 
 
     MovesToPathConverter converter{ds};
@@ -297,16 +275,14 @@ prepared::DataDynamic AlgoAnnealing::find(double &progress)
     for (short i = 0; i < size2; ++i)
         hmoves[i] = ShipMove{short(i/2), bool(qrand()%2)};
 
-    unic(hmoves, smoves);
+    data.calculateHours();
 
-    data.time = converter.calculateHours(data.hmoves, data.smoves);
-    data.opthmoves = data.hmoves;
     s0 = data.time;
 
-    if (tracsCrowded.size() > 100) {
+    if (tracsCrowded.size() > 2) {
         // это значит, что трассы иначально были скучены и мы их перетасовали
         // попытаемся этим воспользоваться
-        for (double temperature = 5; temperature > 0.005; temperature *= 0.8) {
+        for (double temperature = 10; temperature > 0.005; temperature *= 0.8) {
             for (int i = 0; i < 10000; ++i) {
                 ++varvara;
                 //doChangePlace(data, temperature);
@@ -319,6 +295,8 @@ prepared::DataDynamic AlgoAnnealing::find(double &progress)
                 doChangePlace(data, temperature, a, b);
                 doChangeDirection(data, temperature, d);
             }
+
+            data.fromOpt();
         }
     }
 
@@ -329,7 +307,7 @@ prepared::DataDynamic AlgoAnnealing::find(double &progress)
     }
 #endif
 
-#if 0
+#if 1
 #if 0
     //for (int temperature = 10; temperature; temperature--) {
     for (double temperature = 10; temperature > 0.05; temperature *= 0.8) {
@@ -338,22 +316,22 @@ prepared::DataDynamic AlgoAnnealing::find(double &progress)
             doChangePlaceMulty(data, temperature);
         }
         // будем идти от оптимального на цикле
-        data.hmoves = data.opthmoves;
+        data.fromOpt();
     }
 #endif
     for (double temperature = 10; temperature > 0.05; temperature *= 0.8) {
-        for (int i = 0; i < 100000; ++i) {
+        for (int i = 0; i < 10000; ++i) {
             ++varvara;
             doChangePlace(data, temperature);
             doChangeDirection(data, temperature);
         }
+        data.fromOpt();
     }
 #endif
 
-    unic(opthmoves, smoves);
-
-    result = converter.createDD(opthmoves, smoves);
-    time = converter.calculateHours(opthmoves, smoves);
+    data.fromOpt();
+    data.calculateHours();
+    result = data.getDD();
 
     //Q_ASSERT(totalHours(result) == time);
 
@@ -362,9 +340,9 @@ prepared::DataDynamic AlgoAnnealing::find(double &progress)
     qDebug() << "AlgoAnnealing n =" << size << "with" << elaps << "ms, count:" << varvara;
     qDebug() << "h:" << ds.handlers.size() << "s:" << ds.shooters.size();
     qDebug() << "select h:" << result.handlerName << "s:" << result.shooterName;
-    qDebug() << "time" << time;
-    if (totalHours(result) != time) {
-        qDebug() << "SSSSSSSSSSHHHHHHHHHHHHHHHHHHHHIIIIIIIIIIIIIIIIIIIITTTTTTTTTTTTTTT" << totalHours(result) << time;
+    qDebug() << "time" << data.time;
+    if (totalHours(result) != data.time) {
+        qDebug() << "SSSSSSSSSSHHHHHHHHHHHHHHHHHHHHIIIIIIIIIIIIIIIIIIIITTTTTTTTTTTTTTT" << totalHours(result) << data.time;
     }
     qDebug() << "cost" << prepared::totalCost(ds, result);
     qDebug() << "speed:" << double(varvara) / elaps;
