@@ -139,10 +139,7 @@ prepared::DataDynamic AlgoBruteForce::find(double &progress)
                 hplaces.at(i) = i/2;
             do {
                 progress += progressStep;
-                // проверим, что число сенсоров не будет отрицательным - нам такое не нужно
-                if (!converter.handlerCanPassIt(hplaces)) {
-                    continue;
-                }
+
 
                 for (int i = 0; i < size2; ++i) {
                     hmoves[i] = ShipMove{short(hplaces.at(i)), false};

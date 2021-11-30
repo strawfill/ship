@@ -73,7 +73,7 @@ double tracCrowding(const Path &path, const QVector<prepared::Trac> &tracs)
 
 
 
-Path sortViaCrowding(QVector<prepared::Trac> &tracs)
+Path pathViaCrowding(const QVector<prepared::Trac> &tracs)
 {
     if (tracCrowding(tracs) < 1.2)
         return {};
@@ -84,7 +84,7 @@ Path sortViaCrowding(QVector<prepared::Trac> &tracs)
     double bestCrowding{ tracCrowding(best, tracs) };
 
 
-    int to{ qMax(4, int(2 * qSqrt(tracs.size()))) };
+    int to{ qBound(4, int(2 * qSqrt(tracs.size())), 20) };
     for (int i = 2; i < to; ++i) {
         auto temp = finder.createPath(i);
         // чтобы большой порядок разбиений не считался чем-то хорошим, введём поправочный коэффициент
@@ -99,37 +99,20 @@ Path sortViaCrowding(QVector<prepared::Trac> &tracs)
         }
     }
     //qDebug() << "best" << bestCrowding << best;
+    std::sort(best.begin(), best.end());
 
+    return best;
+}
+
+QVector<prepared::Trac> applyPath(const Path &path, const QVector<prepared::Trac> &tracs)
+{
     QVector<prepared::Trac> result;
     result.reserve(tracs.size());
 
-    for (const auto & subpath : qAsConst(best)) {
+    for (const auto & subpath : qAsConst(path)) {
         for (auto index : qAsConst(subpath)) {
             result.append(tracs.at(index));
         }
     }
-
-    auto test = [&](){
-        QSet<int> indexes;
-        int r{};
-        for (const auto & subpath : qAsConst(best)) {
-            for (auto index : qAsConst(subpath)) {
-                indexes.insert(index);
-                ++r;
-            }
-        }
-        if (indexes.size() != tracs.size()) {
-            qDebug() << "!error 1" << Q_FUNC_INFO << indexes.size() << tracs.size() << indexes;
-        }
-        if (indexes.size() != r) {
-            qDebug() << "!error 2" << Q_FUNC_INFO << indexes.size() << r << indexes << best;
-        }
-
-        return indexes.size() == tracs.size() && indexes.size() == r;
-    };
-    Q_ASSERT(test());
-
-
-    tracs.swap(result);
-    return best;
+    return result;
 }

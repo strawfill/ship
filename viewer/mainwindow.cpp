@@ -242,6 +242,8 @@ void MainWindow::processFile(const QString &filename)
         QString s{ QString::number(prepared::totalCost(ds, dd)) };
         int dots{ (s.size()-1) / 3 };
         int start{ s.size() % 3 };
+        if (start == 0)
+            start = 3;
         for (int i = 0; i < dots; ++i) {
             s.insert(start + i*4, '.');
         }

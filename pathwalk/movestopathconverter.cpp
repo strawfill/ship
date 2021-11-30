@@ -15,58 +15,6 @@ void MovesToPathConverter::setShips(const prepared::Handler &ship1, const prepar
     shooter = ship2;
 }
 
-bool MovesToPathConverter::handlerCanPassIt(const std::vector<int> handlerVec) const
-{
-    // не будем пересоздавать его, пусть всегда существует
-    static std::vector<char> passItCheck;
-    passItCheck.resize(handlerVec.size(), 0);
-    int sensors{ handler.sensors() };
-
-    for (unsigned i = 0; i < handlerVec.size(); ++i) {
-        const auto trac{ ds.tracs.at(handlerVec.at(i)) };
-        char & was = passItCheck.at(unsigned(handlerVec.at(i)));
-        if (!was) {
-            was = 1;
-            sensors -= trac.sensors();
-            if (sensors < 0) {
-                passItCheck.clear();
-                return false;
-            }
-        }
-        else {
-            was = 0;
-            sensors += trac.sensors();
-        }
-    }
-    return true;
-}
-
-bool MovesToPathConverter::handlerCanPassIt(const ShipMovesVector &handlerVec) const
-{
-    // не будем пересоздавать его, пусть всегда существует
-    static std::vector<char> passItCheck;
-    passItCheck.resize(unsigned(handlerVec.size()), 0);
-    int sensors{ handler.sensors() };
-
-    for (int i = 0; i < handlerVec.size(); ++i) {
-        const auto trac{ ds.tracs.at(handlerVec.at(i).trac()) };
-        char & was = passItCheck.at(unsigned(handlerVec.at(i).trac()));
-        if (!was) {
-            was = 1;
-            sensors -= trac.sensors();
-            if (sensors < 0) {
-                passItCheck.clear();
-                return false;
-            }
-        }
-        else {
-            was = 0;
-            sensors += trac.sensors();
-        }
-    }
-    return true;
-}
-
 namespace {
 
 struct ProcessTimeData
@@ -80,6 +28,7 @@ struct ProcessTimeData
     QPoint pos;
     int hour{};
     int index{};
+    int sensors{};
 
     enum : bool {
         handler = true,
@@ -138,10 +87,19 @@ bool processTime(ProcessTimeData &data)
         if (calls == 2) {
             calls = 0;
             hourToOther = 0;
+            data.sensors += trac.sensors();
         }
         else {
-            ++calls;
+            if (calls == 0) {
+                data.sensors -= trac.sensors();
+                if (data.sensors < 0) {
+                    return false;
+                }
+            }
+
+            ++data.lineState[input.trac()];
             hourToOther = data.hour;
+
         }
     }
     return processed;
@@ -160,14 +118,15 @@ int MovesToPathConverter::calculateHours(const ShipMovesVector &handlerVec, cons
                 this->handler.speed(), ProcessTimeData::handler };
     ProcessTimeData shooter{ shooterVec, lineState, lineStateChanged, ds,
                 this->shooter.speed(), ProcessTimeData::shooter };
+    handler.sensors = this->handler.sensors();
 
     while (true) {
         bool p1 = processTime(handler);
         bool p2 = processTime(shooter);
 
-        if (!p1 && !p2) {
+        if (handler.sensors < 0 || (!p1 && !p2)) {
             // проверим, почему мы ничего не делали
-            if (shooter.atEnd() && handler.atEnd()) {
+            if (handler.sensors >= 0 && shooter.atEnd() && handler.atEnd()) {
                 // всё хорошо, можно выйти из цикла и продолжить обработку
                 break;
             }

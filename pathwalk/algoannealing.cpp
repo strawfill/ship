@@ -90,9 +90,6 @@ struct AnnealingData
     int calculateHoursWithoutChangeOrder()
     {
         int result{ converter.calculateHours(hmoves, smoves) };
-        //if (result < 100) {
-        //    qDebug().noquote() << "BAD" << result << ":\n" << converter.createDD(hmoves, smoves).toString();
-        //}
         if (result > 0) {
             time = result;
             tryToOpt();
@@ -137,14 +134,6 @@ bool doChangePlaceMulty(AnnealingData &data, double temperature)
     std::reverse(data.hmoves.begin()+a, data.hmoves.begin()+b);
     // действие 1 конец
 
-    if (!data.converter.handlerCanPassIt(data.hmoves)) {
-        // отменить действие
-        std::reverse(data.hmoves.begin()+a, data.hmoves.begin()+b);
-        for (int i = a; i < b; ++i)
-            data.hmoves[i].reverseStartPoint();
-        return false;
-    }
-
     int timeBef = data.time;
     int timeNow = data.calculateHours();
     if (timeNow <= 0) {
@@ -179,12 +168,6 @@ bool doChangePlace(AnnealingData &data, double temperature, int a, int b)
     // действие начало
     std::swap(data.hmoves[a], data.hmoves[b]);
     // действие 1 конец
-
-    if (!data.converter.handlerCanPassIt(data.hmoves)) {
-        // отменить действие
-        std::swap(data.hmoves[a], data.hmoves[b]);
-        return false;
-    }
 
     int timeBef = data.time;
     int timeNow = data.calculateHours();
@@ -247,7 +230,7 @@ inline bool doChangeDirection(AnnealingData &data, double temperature)
 
 prepared::DataDynamic AlgoAnnealing::find(double &progress)
 {
-    QElapsedTimer tm; tm.start(); int s0{}, s1{}, s2{}, s3{};
+    QElapsedTimer tm; tm.start(); int s0{}, s1{}, s2{}, s3{}, s4{};
 
     int varvara{0};
     prepared::DataDynamic result;
@@ -255,7 +238,7 @@ prepared::DataDynamic AlgoAnnealing::find(double &progress)
     int size{ ds.tracs.size() };
     int size2{ 2*size };
 
-    const auto tracsCrowded = sortViaCrowding(ds.tracs);
+    auto pathCrowded = pathViaCrowding(ds.tracs);
 
 
     MovesToPathConverter converter{ds};
@@ -279,16 +262,36 @@ prepared::DataDynamic AlgoAnnealing::find(double &progress)
 
     s0 = data.time;
 
-    if (tracsCrowded.size() > 2) {
-        // это значит, что трассы иначально были скучены и мы их перетасовали
+    if (pathCrowded.size() > 2) {
+        // это значит, что трассы изначально были скучены и мы их перетасовали
         // попытаемся этим воспользоваться
+        auto initTracOrder{ ds.tracs };
+        auto bestPath{ pathCrowded };
+        int bestTime{INT_MAX};
+        int permutations{}; QElapsedTimer tt; tt.start();
+        do {
+            ++permutations;
+            ds.tracs = applyPath(pathCrowded, initTracOrder);
+            data.calculateHours();
+            if (data.time < bestTime) {
+                bestTime = data.time;
+                bestPath = pathCrowded;
+            }
+        } while (permutations < 100000 && std::next_permutation(pathCrowded.begin(), pathCrowded.end()));
+        qDebug() << "perms" << permutations << "with time" << tt.nsecsElapsed() / 1e6 << "ms"
+                 << permutations * 1e6 / tt.nsecsElapsed();
+        ds.tracs = applyPath(bestPath, initTracOrder);
+        data.calculateHours();
+
+        s1 = data.time;
+
         for (double temperature = 10; temperature > 0.005; temperature *= 0.8) {
-            for (int i = 0; i < 10000; ++i) {
+            for (int i = 0; i < 5000; ++i) {
                 ++varvara;
                 //doChangePlace(data, temperature);
                 //doChangeDirection(data, temperature);
-                const int set{ qrand() % tracsCrowded.size() };
-                const auto tracs{ tracsCrowded.at(set) };
+                const int set{ qrand() % pathCrowded.size() };
+                const auto tracs{ pathCrowded.at(set) };
                 const int a = qrand() % tracs.size();
                 const int b = qrand() % tracs.size();
                 const int d = qrand() % tracs.size();
@@ -299,7 +302,7 @@ prepared::DataDynamic AlgoAnnealing::find(double &progress)
             data.fromOpt();
         }
     }
-    s1 = data.time;
+    s2 = data.time;
 
 
 #if 0
@@ -313,31 +316,29 @@ prepared::DataDynamic AlgoAnnealing::find(double &progress)
 #if 1
     //for (int temperature = 10; temperature; temperature--) {
     for (double temperature = 10; temperature > 0.05; temperature *= 0.8) {
-        for (int i = 0; i < 10000; ++i) {
+        for (int i = 0; i < 5000; ++i) {
             ++varvara;
             doChangePlaceMulty(data, temperature);
         }
         // будем идти от оптимального на цикле
         data.fromOpt();
     }
-    s2 = data.time;
+    s3 = data.time;
 #endif
     for (double temperature = 10; temperature > 0.05; temperature *= 0.8) {
-        for (int i = 0; i < 10000; ++i) {
+        for (int i = 0; i < 5000; ++i) {
             ++varvara;
             doChangePlace(data, temperature);
             doChangeDirection(data, temperature);
         }
         data.fromOpt();
     }
-    s3 = data.time;
+    s4 = data.time;
 #endif
 
     data.fromOpt();
     data.calculateHours();
     result = data.getDD();
-
-    //Q_ASSERT(totalHours(result) == time);
 
 
     auto elaps = tm.elapsed();
@@ -345,12 +346,9 @@ prepared::DataDynamic AlgoAnnealing::find(double &progress)
     qDebug() << "h:" << ds.handlers.size() << "s:" << ds.shooters.size();
     qDebug() << "select h:" << result.handlerName << "s:" << result.shooterName;
     qDebug() << "time" << data.time;
-    if (totalHours(result) != data.time) {
-        qDebug() << "SSSSSSSSSSHHHHHHHHHHHHHHHHHHHHIIIIIIIIIIIIIIIIIIIITTTTTTTTTTTTTTT" << totalHours(result) << data.time;
-    }
     qDebug() << "cost" << prepared::totalCost(ds, result);
     qDebug() << "speed:" << double(varvara) / elaps;
-    qDebug() << "ops time in h:" << s0 << s1 << s2 << s3 << "h";
+    qDebug() << "ops time in h:" << s0 << s1 << s2 << s3 << s4 << "h";
 
     return result;
 }

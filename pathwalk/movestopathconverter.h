@@ -64,10 +64,6 @@ public:
         bool isValid() const { return cost > 0; }
     };
 
-    // проверить, не будет ли отрицательное число датчиков на судне согласно заданному маршруту
-    // на входе ожидаются номера трасс, строго по два включения номера для каждой трассы
-    bool handlerCanPassIt(const std::vector<int> handlerVec) const;
-    bool handlerCanPassIt(const ShipMovesVector &handlerVec) const;
 
     void setShips(const prepared::Handler &ship1, const prepared::Shooter &ship2);
 
@@ -83,7 +79,7 @@ private:
     std::vector<int>lineStateChanged;
     PathAndTime pat;
 
-    prepared::DataStatic ds;
+    const prepared::DataStatic &ds;
     prepared::Shooter shooter;
     prepared::Handler handler;
 };

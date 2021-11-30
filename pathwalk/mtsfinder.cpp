@@ -215,30 +215,11 @@ MtsFinder::Path MtsFinder::createPath(int subPathCount) const
     MtsFinder::Path result;
 
     for (const auto & set : qAsConst(temp)) {
-        result.append(QVector<int>{set.constBegin(), set.constEnd()});
+        QVector<int> t{set.constBegin(), set.constEnd()};
+        // хочу, чтобы они были сортированы
+        std::sort(t.begin(), t.end());
+        result.append(t);
     }
-
-
-
-    auto test = [&](){
-        QSet<int> indexes;
-        for (const auto & subpath : qAsConst(result)) {
-            for (auto index : qAsConst(subpath)) {
-                indexes.insert(index);
-            }
-        }
-        if (indexes.size() != vertices()) {
-            qDebug() << "!error 1" << Q_FUNC_INFO << indexes.size() << vertices() << indexes;
-        }
-
-        if (subPathCount != result.size()) {
-            qDebug() << "!error 2" << Q_FUNC_INFO << subPathCount << result;
-
-        }
-
-        return indexes.size() == vertices() && subPathCount == result.size();
-    };
-    Q_ASSERT(test());
 
     return result;
 }
