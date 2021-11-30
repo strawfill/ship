@@ -56,6 +56,10 @@ set(PATHWALK
     pathwalk/algobruteforce.cpp
     pathwalk/algoannealing.h
     pathwalk/algoannealing.cpp
+    pathwalk/mtsfinder.h
+    pathwalk/mtsfinder.cpp
+    pathwalk/sortviacrowding.h
+    pathwalk/sortviacrowding.cpp
     )
 
 set(OTHER

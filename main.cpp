@@ -10,12 +10,27 @@
 #include "movestopathconverter.h"
 #include "prepareddata.h"
 #include <QElapsedTimer>
+#include <QtMath>
 
 #endif
 
 
+
 int main(int argc, char *argv[])
 {
+#if 0
+    QElapsedTimer tm; tm.start();
+    long double test{};
+    auto getdot = []() { return (qrand() % 10000) / (13. + qrand() % 10); };
+    qDebug() << "ld size" << sizeof (test);
+    for (int i = 0; i < int(1e6); ++i) {
+        test += qSqrt(getdot()*getdot() + getdot()*getdot());
+    }
+    qDebug() << "elapced" << tm.nsecsElapsed() / 1e6 << "ms";
+
+    return 0;
+#endif
+
 #if 0
     int f{25000};
     int d{25000};
