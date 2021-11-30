@@ -239,9 +239,16 @@ void MainWindow::processFile(const QString &filename)
 
     ui->plainTextEdit->appendPlainText("-- ошибок не обнаружено");
     if (dd.has) {
+        QString s{ QString::number(prepared::totalCost(ds, dd)) };
+        int dots{ (s.size()-1) / 3 };
+        int start{ s.size() % 3 };
+        for (int i = 0; i < dots; ++i) {
+            s.insert(start + i*4, '.');
+        }
+
+
         ui->plainTextEdit->appendPlainText(
-                    "-- стоимость аренды по маршруту из исходных данных равна " +
-                    QString::number(prepared::totalCost(ds, dd)) + " [" +
+                    "-- стоимость аренды по маршруту из исходных данных равна " + s + " [" +
                     QString::number(prepared::totalHours(dd)) + " ч]");
 
         // отрисуем пустые трассы
