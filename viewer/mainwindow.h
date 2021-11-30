@@ -24,7 +24,6 @@ public:
 protected:
     void dragEnterEvent(QDragEnterEvent *event) override;
     void dropEvent(QDropEvent *event) override;
-    void wheelEvent(QWheelEvent *event) override;
 
 private:
     bool hasGoodFormat(const QMimeData *data);

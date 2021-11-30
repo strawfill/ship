@@ -151,17 +151,6 @@ void MainWindow::dropEvent(QDropEvent *event)
     processMimeData(event->mimeData());
 }
 
-void MainWindow::wheelEvent(QWheelEvent *event)
-{
-    if (event->buttons() == Qt::NoButton && event->modifiers() == (Qt::ShiftModifier|Qt::ControlModifier)) {
-        event->accept();
-        qDebug() << "ok";
-        return;
-    }
-
-    return QMainWindow::wheelEvent(event);
-}
-
 bool MainWindow::hasGoodFormat(const QMimeData *data)
 {
     if (!data)

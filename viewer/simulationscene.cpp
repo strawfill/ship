@@ -244,9 +244,40 @@ void SimulationScene::initSceneItems()
     data->clearItems();
     scene->clear();
 
+    QPen pen{ Qt::gray };
+
     // чтобы начало координат было
-    scene->addLine(-100, 0, 100, 0, QPen{Qt::gray});
-    scene->addLine(0, -100, 0, 100, QPen{Qt::gray});
+    scene->addLine(-100, 0, 100, 0, pen);
+    scene->addLine(0, -100, 0, 100, pen);
+
+
+    // чтобы был понятен масштаб
+    int label{ 50 };
+    double value{ label / distanceModifier };
+    QString suffix{ (value > 1000 ? " км" : " м") };
+    if (value > 1000)
+        value /= 1000;
+    QString string;
+    if (value < 10.)
+        string = QString::number(value, 'f', 2) + suffix;
+    else if (value < 100.)
+        string = QString::number(value, 'f', 1) + suffix;
+    else
+        string = QString::number(value, 'f', 0) + suffix;
+
+
+
+    scene->addLine(label, -2, label, 2, pen);
+    auto textP = scene->addText(string);
+    textP->setPos(label - textP->boundingRect().width()/2, 0);
+
+
+    scene->addLine(-label, -2, -label, 2, pen);
+    scene->addLine(-2, -label, 2, -label, pen);
+    scene->addLine(-2, label, 2, label, pen);
+
+
+
 
     auto map{ getTracToPathMap(data->ds, data->dd) };
 
