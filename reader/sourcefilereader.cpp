@@ -464,18 +464,22 @@ void SourceFileReader::readPath()
             in.readLine();
 
             if (in.lineIsBlockEnd()) {
-                qWarning().noquote() << QString("Строка %1. Ошибка при чтении точки в %2: Встречен конец блока, хотя ожидалось "
-                                                "получить ещё %3 строк для корабля %4")
-                                        .arg(in.strLineNumber()).arg(in.currentFormatString).arg(shipPath.size - i)
-                                        .arg(shipPath.name);
+                if (shipPath.size - i > 0) {
+                    qWarning().noquote() << QString("Строка %1. Ошибка при чтении точки в %2: Встречен конец блока, хотя ожидалось "
+                                                    "получить ещё %3 строк для корабля %4")
+                                            .arg(in.strLineNumber()).arg(in.currentFormatString).arg(shipPath.size - i)
+                                            .arg(shipPath.name);
+                }
                 in.reverseReadLine();
                 break;
             }
             if (checkForOtherBlockStart()) {
-                qWarning().noquote() << QString("Строка ~%1. Ошибка при чтении точки в %2: Встречено начало нового блока, хотя ожидалось "
-                                                "получить ещё %3 строк для корабля %4")
-                                        .arg(in.strLineNumber()).arg(in.currentFormatString).arg(shipPath.size - i)
-                                        .arg(shipPath.name);
+                if (shipPath.size - i > 0) {
+                    qWarning().noquote() << QString("Строка ~%1. Ошибка при чтении точки в %2: Встречено начало нового блока, хотя ожидалось "
+                                                    "получить ещё %3 строк для корабля %4")
+                                            .arg(in.strLineNumber()).arg(in.currentFormatString).arg(shipPath.size - i)
+                                            .arg(shipPath.name);
+                }
                 break;
             }
 
@@ -486,12 +490,14 @@ void SourceFileReader::readPath()
             }
 
             if (pathLikelyShip()) {
-                qWarning().noquote() << QString("Строка %1. Ошибка при чтении строки в %2: Встречена запись, похожая "
-                                                "на начало маршрута следующего корабля, но для текущего маршрута "
-                                                "судна %4 ожидалось получить ещё %3 строк. Действие по умолчанию - "
-                                                "начать считывание следующего маршрута. Входная строка ( %5 )")
-                                        .arg(in.strLineNumber()).arg(in.currentFormatString).arg(shipPath.size - i)
-                                        .arg(shipPath.name).arg(in.currentLine);
+                if (shipPath.size - i > 0) {
+                    qWarning().noquote() << QString("Строка %1. Ошибка при чтении строки в %2: Встречена запись, похожая "
+                                                    "на начало маршрута следующего корабля, но для текущего маршрута "
+                                                    "судна %4 ожидалось получить ещё %3 строк. Действие по умолчанию - "
+                                                    "начать считывание следующего маршрута. Входная строка ( %5 )")
+                                            .arg(in.strLineNumber()).arg(in.currentFormatString).arg(shipPath.size - i)
+                                            .arg(shipPath.name).arg(in.currentLine);
+                }
                 in.reverseReadLine();
                 break;
             }
