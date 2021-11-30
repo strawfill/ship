@@ -247,7 +247,7 @@ inline bool doChangeDirection(AnnealingData &data, double temperature)
 
 prepared::DataDynamic AlgoAnnealing::find(double &progress)
 {
-    QElapsedTimer tm; tm.start(); int s0{}, s1{}, s2{};
+    QElapsedTimer tm; tm.start(); int s0{}, s1{}, s2{}, s3{};
 
     int varvara{0};
     prepared::DataDynamic result;
@@ -299,6 +299,8 @@ prepared::DataDynamic AlgoAnnealing::find(double &progress)
             data.fromOpt();
         }
     }
+    s1 = data.time;
+
 
 #if 0
     for (int i = 0; i < 10; ++i) {
@@ -308,7 +310,7 @@ prepared::DataDynamic AlgoAnnealing::find(double &progress)
 #endif
 
 #if 1
-#if 0
+#if 1
     //for (int temperature = 10; temperature; temperature--) {
     for (double temperature = 10; temperature > 0.05; temperature *= 0.8) {
         for (int i = 0; i < 10000; ++i) {
@@ -318,6 +320,7 @@ prepared::DataDynamic AlgoAnnealing::find(double &progress)
         // будем идти от оптимального на цикле
         data.fromOpt();
     }
+    s2 = data.time;
 #endif
     for (double temperature = 10; temperature > 0.05; temperature *= 0.8) {
         for (int i = 0; i < 10000; ++i) {
@@ -327,6 +330,7 @@ prepared::DataDynamic AlgoAnnealing::find(double &progress)
         }
         data.fromOpt();
     }
+    s3 = data.time;
 #endif
 
     data.fromOpt();
@@ -346,7 +350,7 @@ prepared::DataDynamic AlgoAnnealing::find(double &progress)
     }
     qDebug() << "cost" << prepared::totalCost(ds, result);
     qDebug() << "speed:" << double(varvara) / elaps;
-    qDebug() << "ops time in h:" << s0 << s1 << s2;
+    qDebug() << "ops time in h:" << s0 << s1 << s2 << s3 << "h";
 
     return result;
 }

@@ -125,9 +125,7 @@ void ShipGraphicsItem::setShipPosition(double x1, double y1, double x2, double y
     setShipPosition(x1+dx, y1+dy);
 
     // а теперь хотелось бы, что бы корабль мог нормально крутиться
-
     setShipRotation(-std::atan2(y2-y1, x2-x1) * 180 / M_PI, curH - minH, part);
-    //qDebug() << "p" << y1 << y2 << x1 << x2 << (-std::atan2(y2-y1, x2-x1) * 180 / M_PI);
 }
 
 void ShipGraphicsItem::setShipRotation(double rotation, double hourInThatTrac, double tracPart)
@@ -136,7 +134,7 @@ void ShipGraphicsItem::setShipRotation(double rotation, double hourInThatTrac, d
     //  а) в течение rotationTime часа движения по текущему треку
     constexpr double rotationTime{ 0.1 };
     //  б) в течение rotationTracPart части всего пути по текущему треку
-    constexpr double rotationTracPart{ 0.1 };
+    constexpr double rotationTracPart{ 0.3 };
 
     // какая-то фигня, подбором поставлена
     rotation += 90;
