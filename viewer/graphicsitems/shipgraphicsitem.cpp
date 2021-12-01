@@ -132,7 +132,7 @@ void ShipGraphicsItem::setShipRotation(double rotation, double hourInThatTrac, d
 {
     // реализация такая, что корабль полностью плавно повернётся на новое направление по минимальному условию из
     //  а) в течение rotationTime часа движения по текущему треку
-    constexpr double rotationTime{ 0.1 };
+    constexpr double rotationTime{ 0.6 };
     //  б) в течение rotationTracPart части всего пути по текущему треку
     constexpr double rotationTracPart{ 0.3 };
 

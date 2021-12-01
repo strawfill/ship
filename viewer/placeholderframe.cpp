@@ -16,11 +16,13 @@ PlaceholderFrame::PlaceholderFrame(QWidget *parent) : QFrame(parent)
     label->setText("\n\n\nДля начала работы перетащите или вставьте через " +
                    QKeySequence(QKeySequence::Paste).toString() +
                    "\nсюда файл или текст с исходными данными"
-                   "\n\n\n\nСовет:"
+                   "\n\n\nДля просмотра заставки нажмите Ctrl+T"
+                   "\n\nСовет:"
                    "\nМасштаб графического отображения можно"
                    "\nизменять с помощью вращения колёсика мыши"
                    "\nдвумя разными по сути способосами:"
                    "\nС нажатым Ctrl"
                    "\nС нажатым Ctrl+Shift"
-                   "\n");
+                   "\n"
+                   );
 }

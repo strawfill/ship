@@ -66,6 +66,8 @@ set(PATHWALK
     pathwalk/mtsfinder.cpp
     pathwalk/sortviacrowding.h
     pathwalk/sortviacrowding.cpp
+    pathwalk/worker.h
+    pathwalk/worker.cpp
     )
 
 set(OTHER

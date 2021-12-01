@@ -56,6 +56,8 @@ prepared::DataDynamic AlgoBruteForce::find(double &progress)
     int size{ ds.tracs.size() };
     int size2{ 2*size };
 
+    Q_ASSERT(size < 5);
+
     MovesToPathConverter converter{ds};
 
     std::vector<int> hplaces;

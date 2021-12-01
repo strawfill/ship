@@ -366,12 +366,17 @@ int totalHours(const DataDynamic &dd)
     return result;
 }
 
+int totalDays(const DataDynamic &dd)
+{
+    return qCeil(totalHours(dd) / 24.);
+}
+
 qlonglong totalCost(const DataStatic &ds, const DataDynamic &dd)
 {
     if (!dd.has)
         return 0LL;
 
-    int days{ qCeil(totalHours(dd) / 24.) };
+    int days{ totalDays(dd) };
 
     return ds.handlerViaName(dd.handlerName).cost(days) +
             ds.shooterViaName(dd.shooterName).cost(days);

@@ -15,6 +15,8 @@ class WaitingFrame;
 
 class GraphicsItemZoomer;
 class GraphicsViewZoomer;
+class QThread;
+class Worker;
 
 class MainWindow : public QMainWindow
 {
@@ -39,13 +41,21 @@ private:
     void saveSettings();
 
     void initActions();
+    void prepareWorker();
 
     enum class SimulationWindow { viewer, placeholder, waiter, see };
     void setCurrentSimulationWindow(SimulationWindow type);
     void setCurrentSimulationWindowForce(SimulationWindow type);
 
+    void changePlaceholderSee();
+
 private slots:
     void setStartPauseButtonPixmapState(bool isStarted);
+    void workerEndWork();
+
+signals:
+    void startWorkerRequest();
+    void stopWorkerRequest();
 
 private:
     Ui::MainWindow *ui;
@@ -54,8 +64,12 @@ private:
     WaitingFrame *waitingFrame{ nullptr };
     GraphicsItemZoomer *itemZoomer{ nullptr };
     GraphicsViewZoomer *viewZoomer{ nullptr };
+    QThread *workerThread{ nullptr };
+    Worker *worker{ nullptr };
+    QString staticDataString;
 
     SimulationWindow windowType{ SimulationWindow::placeholder };
+    bool workerSleep{ true };
 
 };
 #endif // MAINWINDOW_H

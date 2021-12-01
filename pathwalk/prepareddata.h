@@ -207,6 +207,7 @@ struct DataDynamic
 };
 
 int totalHours(const DataDynamic &dd);
+int totalDays(const DataDynamic &dd);
 
 qlonglong totalCost(const DataStatic &ds, const DataDynamic &dd);
 

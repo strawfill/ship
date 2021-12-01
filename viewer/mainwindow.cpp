@@ -4,6 +4,7 @@
 #include <QMimeData>
 #include <QSettings>
 #include <QTemporaryFile>
+#include <QThread>
 
 #include "algoannealing.h"
 #include "algobruteforce.h"
@@ -19,6 +20,7 @@
 #include "sourcefilereader.h"
 #include "movestopathconverter.h"
 #include "waitingframe.h"
+#include "worker.h"
 
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
@@ -29,6 +31,8 @@ MainWindow::MainWindow(QWidget *parent)
     , scene(new SimulationScene(this))
     , placeholderFrame(new PlaceholderFrame(this))
     , waitingFrame(new WaitingFrame(this))
+    , workerThread(new QThread(this))
+    , worker(new Worker)
 {
     ui->setupUi(this);
     // чтобы второй был минимального размера
@@ -37,7 +41,6 @@ MainWindow::MainWindow(QWidget *parent)
     ui->simulationViewLayout->addWidget(placeholderFrame);
     ui->simulationViewLayout->addWidget(waitingFrame);
     setCurrentSimulationWindowForce(SimulationWindow::placeholder);
-    setCurrentSimulationWindowForce(SimulationWindow::see);
 
     connect(DebugCatcher::instance(), &DebugCatcher::messageRecieved, ui->plainTextEdit, &QPlainTextEdit::appendPlainText);
 
@@ -60,6 +63,11 @@ MainWindow::MainWindow(QWidget *parent)
     setStartPauseButtonPixmapState(false);
 
     initActions();
+    prepareWorker();
+
+    ui->graphicsView->setDragMode(QGraphicsView::ScrollHandDrag);
+    viewZoomer->set_enable(true);
+
 #if 0
     QMimeData md;
     md.setUrls(QList<QUrl>() << QUrl{"file:///" + QDir::currentPath() + "/../input/simple.m/8.txt"});
@@ -94,6 +102,24 @@ void MainWindow::initActions()
     stop->setShortcut(QKeySequence{Qt::CTRL + Qt::Key_R});
     connect(stop, &QAction::triggered, scene, &SimulationScene::stopSimulation);
     addAction(stop);
+
+    // включение режима просмотра
+    auto seeing{ new QAction(this) };
+    seeing->setShortcut(QKeySequence{Qt::CTRL + Qt::Key_T});
+    connect(seeing, &QAction::triggered, this, &MainWindow::changePlaceholderSee);
+    addAction(seeing);
+}
+
+void MainWindow::prepareWorker()
+{
+    worker->moveToThread(workerThread);
+    // теперь они в разных потоках и поэтому будет соединение через очередь
+    connect(workerThread, &QThread::finished, worker, &QObject::deleteLater);
+    connect(this, &MainWindow::startWorkerRequest, worker, &Worker::start);
+    connect(this, &MainWindow::stopWorkerRequest, worker, &Worker::stop);
+    connect(worker, &Worker::progressChanged, waitingFrame, &WaitingFrame::changeProgressBarValue);
+    connect(worker, &Worker::ended, this, &MainWindow::workerEndWork);
+    workerThread->start();
 }
 
 void MainWindow::setCurrentSimulationWindow(MainWindow::SimulationWindow type)
@@ -116,8 +142,19 @@ void MainWindow::setCurrentSimulationWindowForce(MainWindow::SimulationWindow ty
         waitingFrame->setRule(WaitingFrame::Rule::see);
 }
 
+void MainWindow::changePlaceholderSee()
+{
+    if (windowType == SimulationWindow::placeholder)
+        setCurrentSimulationWindow(SimulationWindow::see);
+    else if (windowType == SimulationWindow::see)
+        setCurrentSimulationWindow(SimulationWindow::placeholder);
+}
+
 MainWindow::~MainWindow()
 {
+    workerThread->quit();
+    workerThread->wait();
+
     saveSettings();
     delete ui;
 }
@@ -177,6 +214,11 @@ void MainWindow::dropEvent(QDropEvent *event)
     processMimeData(event->mimeData());
 }
 
+void MainWindow::postFromClipboardRequested()
+{
+    processMimeData(QGuiApplication::clipboard()->mimeData());
+}
+
 bool MainWindow::hasGoodFormat(const QMimeData *data)
 {
     if (!data)
@@ -200,11 +242,12 @@ bool MainWindow::hasGoodFormat(const QMimeData *data)
     return true;
 }
 
+
 void MainWindow::processMimeData(const QMimeData *data)
 {
-    scene->clear();
-    ui->graphicsView->setDragMode(QGraphicsView::NoDrag);
-    viewZoomer->set_enable(false);
+    if (!workerSleep)
+        return;
+    // пока что просто выйдем
 
     if (!data)
         return;
@@ -262,11 +305,6 @@ void MainWindow::processFile(const QString &filename)
     }
     // ошибок не обнаружено
     setCurrentSimulationWindow(SimulationWindow::waiter);
-    qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
-
-    // разрешим перетягивание
-    ui->graphicsView->setDragMode(QGraphicsView::ScrollHandDrag);
-    viewZoomer->set_enable(true);
 
     ui->plainTextEdit->appendPlainText("-- ошибок не обнаружено");
     if (dd.has) {
@@ -289,15 +327,25 @@ void MainWindow::processFile(const QString &filename)
         setCurrentSimulationWindow(SimulationWindow::viewer);
         return;
     }
-#if 1
-#if 1
-    AlgoBruteForce algo(ds);
-#else
-    AlgoAnnealing algo(ds);
-#endif
-    dd = algo.find();
-#endif
 
+    staticDataString.clear();
+    QFile origin(filename);
+    if (origin.open(QIODevice::Text|QIODevice::ReadOnly)) {
+        origin.seek(0);
+        staticDataString = origin.readAll();
+        origin.close();
+    }
+
+    worker->setData(ds);
+    emit startWorkerRequest();
+}
+
+void MainWindow::workerEndWork()
+{
+    workerSleep = true;
+
+    auto ds{ worker->getInitData() };
+    auto dd{ worker->getData() };
 
     scene->setSources(ds, dd);
     setCurrentSimulationWindow(SimulationWindow::viewer);
@@ -306,18 +354,15 @@ void MainWindow::processFile(const QString &filename)
         ui->plainTextEdit->appendPlainText(
                     "-- стоимость аренды по созданному маршруту равна " +
                     QString::number(prepared::totalCost(ds, dd)) + " [" +
-                    QString::number(prepared::totalHours(dd)) + " ч]");
+                    QString::number(prepared::totalHours(dd)) + " ч / " +
+                    QString::number(prepared::totalDays(dd)) + " дн. ]");
+
 #if 1 // самотестирование, в целом потом стоит убрать
         QFile file("out.txt");
         if (file.open(QIODevice::Text|QIODevice::ReadWrite|QIODevice::Truncate)) {
-            QFile origin(filename);
             QTextStream ts(&file);
-            if (origin.open(QIODevice::Text|QIODevice::ReadOnly)) {
-                origin.seek(0);
-                ts << origin.readAll();
-                ts << "\n";
-                origin.close();
-            }
+            ts << staticDataString;
+            ts << "\n";
             ts << dd.toString();
 
             file.close();
@@ -325,14 +370,8 @@ void MainWindow::processFile(const QString &filename)
 
         processFile("out.txt");
 #endif
-
     }
     else {
-        ui->plainTextEdit->appendPlainText("-- маршрут не был создан...");
+        ui->plainTextEdit->appendPlainText("-- маршрут не был создан, что-то пошло не так...");
     }
-}
-
-void MainWindow::postFromClipboardRequested()
-{
-    processMimeData(QGuiApplication::clipboard()->mimeData());
 }

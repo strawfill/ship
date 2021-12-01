@@ -16,6 +16,9 @@ AlgoAnnealing::AlgoAnnealing(const prepared::DataStatic ads)
 prepared::DataDynamic AlgoAnnealing::find()
 {
     double test;
+
+    auto res = find(test);
+
     return find(test);
 
     // TO DO TODO
@@ -28,8 +31,7 @@ prepared::DataDynamic AlgoAnnealing::find()
 }
 
 
-static void unic(const ShipMovesVector &init, ShipMovesVector &target) {
-    static QVector<char> ch;
+static void unic(const ShipMovesVector &init, ShipMovesVector &target, QVector<char> &ch) {
     if (ch.size() != init.size()/2)
         ch.resize(init.size()/2);
     int cur{0};
@@ -53,6 +55,7 @@ struct AnnealingData
     ShipMovesVector &opthmoves;
     ShipMovesVector &hmoves;
     ShipMovesVector &smoves;
+    QVector<char> ch;
     int opttime{INT_MAX};
     int time{INT_MAX};
 
@@ -74,7 +77,7 @@ struct AnnealingData
     }
     void updateSmoves()
     {
-        unic(hmoves, smoves);
+        unic(hmoves, smoves, ch);
     }
     int calculateHoursWithoutChangeOrder()
     {
