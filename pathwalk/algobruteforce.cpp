@@ -26,27 +26,6 @@ prepared::DataDynamic AlgoBruteForce::find()
 
 }
 
-struct TimePath
-{
-    QString path;
-    int time;
-    bool eq;
-
-    bool operator<(const TimePath &other) const
-    { return this->time < other.time; }
-};
-
-QVector<TimePath> tp;
-char helps[5] = {};
-
-QDebug operator<<(QDebug debug, const TimePath &c)
-{
-    QDebugStateSaver saver(debug);
-    debug.nospace().noquote() << "h (" << c.time << ") : (" << c.path << ")"
-                              << " is " << (c.eq ? "unic" : "b");
-
-    return debug;
-}
 
 static ShipMovesVector unic(const ShipMovesVector &init) {
     static QVector<char> ch;
@@ -68,8 +47,6 @@ static ShipMovesVector unic(const ShipMovesVector &init) {
 
 prepared::DataDynamic AlgoBruteForce::find(double &progress)
 {
-    tp.clear();
-    tp.reserve(200000);
     QElapsedTimer tm; tm.start();
 
     int varvara{0};
@@ -206,8 +183,6 @@ prepared::DataDynamic AlgoBruteForce::find(double &progress)
                                     }
                                 }
 
-
-                                tp.append(TimePath{path, hours, un});
                             }
 #endif
 
@@ -232,13 +207,6 @@ prepared::DataDynamic AlgoBruteForce::find(double &progress)
     qDebug() << "time" << time;
     qDebug() << "cost" << prepared::totalCost(ds, result);
     qDebug() << "speed:" << double(varvara) / elaps;
-
-    if (!tp.isEmpty()) {
-        std::sort(tp.begin(), tp.end());
-        for (int i = 0; i < tp.size(); ++i) {
-            qDebug() << tp.at(i);
-        }
-    }
 
     return result;
 }

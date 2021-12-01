@@ -34,8 +34,8 @@ private:
     TracState getState(double hour) const;
 
 private:
-    prepared::Trac trac;
     TracActions actions;
+    prepared::Trac trac;
 };
 
 #endif // TRACGRAPHICSITEM_H

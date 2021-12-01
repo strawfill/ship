@@ -40,7 +40,7 @@ private:
 
     void initActions();
 
-    enum class SimulationWindow { viewer, placeholder, waiter };
+    enum class SimulationWindow { viewer, placeholder, waiter, see };
     void setCurrentSimulationWindow(SimulationWindow type);
     void setCurrentSimulationWindowForce(SimulationWindow type);
 

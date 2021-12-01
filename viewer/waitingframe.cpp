@@ -1,24 +1,36 @@
 #include "waitingframe.h"
 
-#include "shipgraphicsitem.h"
+#include "algodummy.h"
+#include "ignoredndgraphicsview.h"
+#include "simulationscene.h"
+#include "prepareddata.h"
 
 #include <QVBoxLayout>
 #include <QGraphicsView>
 #include <QGraphicsScene>
 #include <QGraphicsPathItem>
-#include <QTimerEvent>
+#include <QResizeEvent>
+#include <QTimer>
 #include <QLabel>
+#include <QProgressBar>
 
 #include <QtMath>
 
+#if 1
+#include <QDebug>
+#include <QElapsedTimer>
+#endif
+
 WaitingFrame::WaitingFrame(QWidget *parent)
     : QFrame(parent)
+    , viewer(new IgnoreDndGraphicsView(this))
+    , scene(new SimulationScene(this))
+    , label(new QLabel(this))
+    , progressBar(new QProgressBar(this))
 {
     setFrameStyle(QFrame::NoFrame);
 
     auto hlayout{ new QVBoxLayout(this) };
-    auto viewer{ new QGraphicsView(this) };
-    auto label{ new QLabel(this) };
     label->setAlignment(Qt::AlignCenter);
     hlayout->addWidget(viewer);
     hlayout->setMargin(0);
@@ -30,84 +42,100 @@ WaitingFrame::WaitingFrame(QWidget *parent)
     viewer->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     viewer->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     viewer->setMinimumSize(250, 250);
+    viewer->setScene(scene->getScene());
+
+    progressBar->setValue(0);
+    progressBar->setFixedHeight(4);
+    progressBar->setTextVisible(false);
+
+    setRuleForce(Rule::see);
+
+    scene->setSimulationSpeed(10);
 
     label->setText("Подождите, идёт создание маршрута...");
 
-    auto scene{ new QGraphicsScene(this) };
-
-
-    viewer->setScene(scene);
-
-    for (int i = 0; i < count; ++i) {
-        auto h{ new ShipGraphicsItem(raw::Ship::Type::handler, 10, {}, 1) };
-        auto s{ new ShipGraphicsItem(raw::Ship::Type::shooter, 10, {}, 1) };
-
-        handlers.append(h);
-        shooters.append(s);
-        degrees.append(0);
-
-        scene->addItem(h);
-        scene->addItem(s);
-    }
+    connect(scene, &SimulationScene::startPauseChanged, this, &WaitingFrame::simulationStateChanged);
 }
 
+void WaitingFrame::setRule(WaitingFrame::Rule type)
+{
+    if (rule != type)
+        setRuleForce(rule);
+}
+
+void WaitingFrame::setRuleForce(WaitingFrame::Rule type)
+{
+    label->setVisible(type == Rule::wait);
+    progressBar->setVisible(type == Rule::wait);
+}
 
 void WaitingFrame::showEvent(QShowEvent *event)
 {
-    setInitPos();
+    show = true;
+    createSimulation();
 
     QFrame::showEvent(event);
-
-    timerId = startTimer(15);
 }
 
 void WaitingFrame::hideEvent(QHideEvent *event)
 {
-    if (timerId >= 0)
-        killTimer(timerId);
+    show = false;
+    scene->stopSimulation();
+    scene->clear();
 
     QFrame::hideEvent(event);
 }
 
-void WaitingFrame::timerEvent(QTimerEvent *event)
+void WaitingFrame::createSimulation()
 {
-    QFrame::timerEvent(event);
+    scene->clear();
 
-    if (event->timerId() != timerId)
+    using namespace prepared;
+
+    DataStatic ds;
+    ds.handlers.append(Handler({}, 5 + qrand() % 5, 20000, 1, 1));
+    ds.shooters.append(Shooter({}, 5 + qrand() % 5, 1));
+    ds.applyAddedShips();
+
+    auto rand = [](){ return 100 * (qrand() % 1001 - 500); };
+
+    for (int i = 0; i < 3; ++i) {
+        ds.tracs.append(Trac(raw::Trac{rand(), rand(), rand(), rand(), 1000}));
+    }
+    ds.applyAddedTracs();
+
+    QElapsedTimer tm; tm.start();
+    DataDynamic dd{ AlgoDummy(ds).find() };
+
+    scene->setSources(ds, dd);
+    scene->zoomSimulation(0.7);
+    viewer->setSceneRect(QRectF{-100, -100, 200, 200});
+
+    QTimer::singleShot(700, scene, &SimulationScene::startSimulation);
+}
+
+void WaitingFrame::simulationStateChanged()
+{
+    if (!show || scene->simulationActiveNow())
         return;
 
-    setNextPos();
+
+    QTimer::singleShot(700, this, &WaitingFrame::createSimulation);
 }
 
-void WaitingFrame::setRotation()
+
+void WaitingFrame::resizeEvent(QResizeEvent *event)
 {
-    for (int i = 0; i < count; ++i) {
-        setPlaceForShip(30 + 15*i, qRound(degrees.at(i)), handlers.at(i));
-        setPlaceForShip(30 + 15*i, qRound(degrees.at(i)) + 180, shooters.at(i));
-    }
+    QSize frameSize{ event->size() };
+
+    label->resize(qRound(frameSize.width() / 1.5), label->height());
+    QSize labelSize{ label->size() };
+    label->move((frameSize.width()-labelSize.width())/2, frameSize.height()-labelSize.height() - 4);
+
+    progressBar->resize(frameSize.width()-2, progressBar->height());
+    progressBar->move(1, frameSize.height() - 5);
+
+
+    QFrame::resizeEvent(event);
 }
 
-void WaitingFrame::setPlaceForShip(double radius, int degree, QGraphicsPathItem *ship)
-{
-    const double y = qSin(degree * M_PI / 180) * radius;
-    const double x = qCos(degree * M_PI / 180) * radius;
-
-    ship->setPos(x, y);
-    ship->setRotation(degree+180);
-    ship->update();
-}
-
-void WaitingFrame::setInitPos()
-{
-    for (int i = 0; i < count; ++i)
-        degrees[i] = 0;
-}
-
-void WaitingFrame::setNextPos()
-{
-    for (int i = 0; i < count; ++i) {
-        degrees[i] += 2. / (1 + i);
-    }
-
-    setRotation();
-}

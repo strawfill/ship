@@ -39,6 +39,7 @@ constexpr auto formatPath = raw::formatPath;
 struct Line : QLine
 {
     Line() {}
+    Line(const QLine &line) : QLine(line) { }
     Line(const QPoint &pt1, const QPoint &pt2) : QLine(pt1, pt2) { }
     Line(int x1, int y1, int x2, int y2) : QLine(x1, y1, x2, y2) { }
     inline bool operator<(const Line &other) const
@@ -88,8 +89,8 @@ public:
 
 private:
     Line ln;
-    double distance;
-    int sensorCount;
+    double distance{};
+    int sensorCount{};
     IceeArray limits;
     bool validData{ false };
 };
@@ -163,6 +164,10 @@ struct DataStatic
     // или они просто являются дублями - такое стоит убрать
     void removeDummyShips();
     void detectErrors();
+
+    // если вы задавали данные вручную явно, то необходимо вызвать данные методы
+    void applyAddedTracs();
+    void applyAddedShips();
 
     Handler handlerViaName(const QString &name) const { return name2handler.value(name); }
     Shooter shooterViaName(const QString &name) const { return name2shooter.value(name); }

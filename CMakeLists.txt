@@ -56,10 +56,12 @@ set(PATHWALK
     pathwalk/patherrordetector.cpp
     pathwalk/movestopathconverter.h
     pathwalk/movestopathconverter.cpp
-    pathwalk/algobruteforce.h
-    pathwalk/algobruteforce.cpp
     pathwalk/algoannealing.h
     pathwalk/algoannealing.cpp
+    pathwalk/algobruteforce.h
+    pathwalk/algobruteforce.cpp
+    pathwalk/algodummy.h
+    pathwalk/algodummy.cpp
     pathwalk/mtsfinder.h
     pathwalk/mtsfinder.cpp
     pathwalk/sortviacrowding.h

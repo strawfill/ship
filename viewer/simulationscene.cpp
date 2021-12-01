@@ -78,6 +78,11 @@ void SimulationScene::clear()
     scene->setSceneRect(QRect());
 }
 
+bool SimulationScene::simulationActiveNow() const
+{
+    return tickTimer->isActive();
+}
+
 void SimulationScene::startSimulation()
 {
     if (!data)
@@ -104,7 +109,7 @@ void SimulationScene::pauseSimulation()
 
 void SimulationScene::startPauseSimulation()
 {
-    if (tickTimer->isActive())
+    if (simulationActiveNow())
         pauseSimulation();
     else
         startSimulation();
@@ -168,9 +173,6 @@ using Line2PDPV = QMap<Line, PathDotPairVector>;
 Line2PDPV getTracToPathMap(const DataStatic &ds, const DataDynamic &dd) {
     // заполним для каждой трассы действия кораблей
     Line2PDPV map;
-
-    for (const auto & trac : ds.tracs)
-        map.insert(trac.line(), {});
 
     auto fillFrom = [&map, &ds](const QVector<PathDot> &pd) {
         for (int i = 1; i < pd.size(); ++i) {

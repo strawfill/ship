@@ -27,16 +27,6 @@ prepared::DataDynamic AlgoAnnealing::find()
 
 }
 
-struct TimePath
-{
-    QString path;
-    int time;
-    bool eq;
-
-    bool operator<(const TimePath &other) const
-    { return this->time < other.time; }
-};
-
 
 static void unic(const ShipMovesVector &init, ShipMovesVector &target) {
     static QVector<char> ch;
@@ -53,7 +43,6 @@ static void unic(const ShipMovesVector &init, ShipMovesVector &target) {
             ch[el.trac()] = 0;
         }
     }
-
 }
 
 namespace {

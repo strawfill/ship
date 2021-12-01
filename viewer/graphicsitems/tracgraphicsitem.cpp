@@ -6,8 +6,8 @@
 TracGraphicsItem::TracGraphicsItem(const prepared::Trac &atrac, const TracActions &acts, double amodifier)
     : QGraphicsLineItem(atrac.line().p1().x() * amodifier, -atrac.line().p1().y() * amodifier,
                         atrac.line().p2().x() * amodifier, -atrac.line().p2().y() * amodifier)
-    , trac(atrac)
     , actions(acts)
+    , trac(atrac)
 {
 }
 

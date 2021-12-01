@@ -27,6 +27,8 @@ public:
     double simulationTime() const { return hour; }
     double simulationSpeed() const { return speed; }
 
+    bool simulationActiveNow() const;
+
     QGraphicsScene* getScene() const { return scene; }
 
 signals:
@@ -69,7 +71,6 @@ private:
 
     int endSimulationTime{ 0 };
     bool runAfterEnd{ false };
-    bool nowRunning{ false };
 };
 
 #endif // SIMULATIONSCENE_H

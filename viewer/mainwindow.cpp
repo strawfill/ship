@@ -31,15 +31,13 @@ MainWindow::MainWindow(QWidget *parent)
     , waitingFrame(new WaitingFrame(this))
 {
     ui->setupUi(this);
-    // пока он не имеет смысла, и не понятно, будет ли иметь в будущем
-    ui->groupBox_optimisation->hide();
     // чтобы второй был минимального размера
     ui->splitter->setSizes({10000, 1});
 
     ui->simulationViewLayout->addWidget(placeholderFrame);
     ui->simulationViewLayout->addWidget(waitingFrame);
     setCurrentSimulationWindowForce(SimulationWindow::placeholder);
-    setCurrentSimulationWindowForce(SimulationWindow::waiter);
+    setCurrentSimulationWindowForce(SimulationWindow::see);
 
     connect(DebugCatcher::instance(), &DebugCatcher::messageRecieved, ui->plainTextEdit, &QPlainTextEdit::appendPlainText);
 
@@ -108,8 +106,14 @@ void MainWindow::setCurrentSimulationWindowForce(MainWindow::SimulationWindow ty
 {
     windowType = type;
     ui->graphicsView->setVisible(type == SimulationWindow::viewer);
+    ui->simulationParams->setVisible(type == SimulationWindow::viewer);
     placeholderFrame->setVisible(type == SimulationWindow::placeholder);
-    waitingFrame->setVisible(type == SimulationWindow::waiter);
+    waitingFrame->setVisible(type == SimulationWindow::waiter || type == SimulationWindow::see);
+
+    if (type == SimulationWindow::waiter)
+        waitingFrame->setRule(WaitingFrame::Rule::wait);
+    else if (type == SimulationWindow::see)
+        waitingFrame->setRule(WaitingFrame::Rule::see);
 }
 
 MainWindow::~MainWindow()
@@ -286,7 +290,7 @@ void MainWindow::processFile(const QString &filename)
         return;
     }
 #if 1
-#if 0
+#if 1
     AlgoBruteForce algo(ds);
 #else
     AlgoAnnealing algo(ds);
@@ -303,6 +307,7 @@ void MainWindow::processFile(const QString &filename)
                     "-- стоимость аренды по созданному маршруту равна " +
                     QString::number(prepared::totalCost(ds, dd)) + " [" +
                     QString::number(prepared::totalHours(dd)) + " ч]");
+#if 1 // самотестирование, в целом потом стоит убрать
         QFile file("out.txt");
         if (file.open(QIODevice::Text|QIODevice::ReadWrite|QIODevice::Truncate)) {
             QFile origin(filename);
@@ -319,6 +324,7 @@ void MainWindow::processFile(const QString &filename)
         }
 
         processFile("out.txt");
+#endif
 
     }
     else {

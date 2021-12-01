@@ -185,6 +185,25 @@ DataStatic::DataStatic(const raw::Data &data)
     detectErrors();
 }
 
+void DataStatic::applyAddedTracs()
+{
+    line2trac.clear();
+    for (const auto & trac : qAsConst(tracs))
+        line2trac.insert(trac.line(), trac);
+}
+
+void DataStatic::applyAddedShips()
+{
+    name2handler.clear();
+    name2shooter.clear();
+
+    for (const auto & ship : qAsConst(handlers))
+        name2handler.insert(ship.name(), ship);
+
+    for (const auto & ship : qAsConst(shooters))
+        name2shooter.insert(ship.name(), ship);
+}
+
 namespace {
 
 template<typename T>
