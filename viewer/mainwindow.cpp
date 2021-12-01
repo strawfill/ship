@@ -274,6 +274,25 @@ void MainWindow::processMimeData(const QMimeData *data)
     }
 }
 
+namespace {
+
+QString outputResult(const prepared::DataStatic & ds, const prepared::DataDynamic & dd)
+{
+    QString s{ QString::number(prepared::totalCost(ds, dd)) };
+    int dots{ (s.size()-1) / 3 };
+    int start{ s.size() % 3 };
+    if (start == 0)
+        start = 3;
+    for (int i = 0; i < dots; ++i) {
+        s.insert(start + i*4, '.');
+    }
+
+    return s + " [" + QString::number(prepared::totalHours(dd)) + " ч / " +
+            QString::number(prepared::totalDays(dd)) + " дн.]";
+};
+
+}
+
 void MainWindow::processFile(const QString &filename)
 {
     Q_ASSERT(QFileInfo(filename).isFile());
@@ -306,21 +325,14 @@ void MainWindow::processFile(const QString &filename)
     // ошибок не обнаружено
     setCurrentSimulationWindow(SimulationWindow::waiter);
 
+
+
     ui->plainTextEdit->appendPlainText("-- ошибок не обнаружено");
     if (dd.has) {
-        QString s{ QString::number(prepared::totalCost(ds, dd)) };
-        int dots{ (s.size()-1) / 3 };
-        int start{ s.size() % 3 };
-        if (start == 0)
-            start = 3;
-        for (int i = 0; i < dots; ++i) {
-            s.insert(start + i*4, '.');
-        }
 
 
         ui->plainTextEdit->appendPlainText(
-                    "-- стоимость аренды по маршруту из исходных данных равна " + s + " [" +
-                    QString::number(prepared::totalHours(dd)) + " ч]");
+                    "-- стоимость аренды по маршруту из исходных данных равна " + outputResult(ds, dd));
 
         // отрисуем пустые трассы
         scene->setSources(ds, dd);
@@ -352,10 +364,7 @@ void MainWindow::workerEndWork()
 
     if (dd.has) {
         ui->plainTextEdit->appendPlainText(
-                    "-- стоимость аренды по созданному маршруту равна " +
-                    QString::number(prepared::totalCost(ds, dd)) + " [" +
-                    QString::number(prepared::totalHours(dd)) + " ч / " +
-                    QString::number(prepared::totalDays(dd)) + " дн. ]");
+                    "-- стоимость аренды по созданному маршруту равна " + outputResult(ds, dd));
 
 #if 1 // самотестирование, в целом потом стоит убрать
         QFile file("out.txt");
