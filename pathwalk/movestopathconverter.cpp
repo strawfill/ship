@@ -142,11 +142,6 @@ int MovesToPathConverter::calculateHours(const ShipMovesVector &handlerVec, cons
     handler.addGoHome();
     shooter.addGoHome();
 
-    if (qMax(shooter.hour, handler.hour) < 100) {
-        qDebug() << "Пипец" << qMax(shooter.hour, handler.hour);
-        calculateHours(handlerVec, shooterVec);
-    }
-
     return qMax(shooter.hour, handler.hour);
 }
 
