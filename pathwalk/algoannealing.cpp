@@ -286,7 +286,7 @@ prepared::DataDynamic AlgoAnnealing::find(double &progress)
         s1 = data.time;
 
         for (double temperature = 10; temperature > 0.005; temperature *= 0.8) {
-            for (int i = 0; i < 5000; ++i) {
+            for (int i = 0; i < 3000; ++i) {
                 ++varvara;
                 //doChangePlace(data, temperature);
                 //doChangeDirection(data, temperature);
@@ -301,8 +301,8 @@ prepared::DataDynamic AlgoAnnealing::find(double &progress)
 
             data.fromOpt();
         }
+        s2 = data.time;
     }
-    s2 = data.time;
 
 
 #if 0
@@ -316,7 +316,7 @@ prepared::DataDynamic AlgoAnnealing::find(double &progress)
 #if 1
     //for (int temperature = 10; temperature; temperature--) {
     for (double temperature = 10; temperature > 0.05; temperature *= 0.8) {
-        for (int i = 0; i < 5000; ++i) {
+        for (int i = 0; i < 100000; ++i) {
             ++varvara;
             doChangePlaceMulty(data, temperature);
         }
@@ -325,8 +325,8 @@ prepared::DataDynamic AlgoAnnealing::find(double &progress)
     }
     s3 = data.time;
 #endif
-    for (double temperature = 10; temperature > 0.05; temperature *= 0.8) {
-        for (int i = 0; i < 5000; ++i) {
+    for (double temperature = 50; temperature > 0.05; temperature *= 0.8) {
+        for (int i = 0; i < 10000; ++i) {
             ++varvara;
             doChangePlace(data, temperature);
             doChangeDirection(data, temperature);
