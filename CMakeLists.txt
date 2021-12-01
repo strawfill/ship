@@ -34,6 +34,10 @@ set(VIEWER
     viewer/graphicsitems/tracgraphicsitem.cpp
     viewer/graphicsitems/shipgraphicsitem.h
     viewer/graphicsitems/shipgraphicsitem.cpp
+    viewer/placeholderframe.h
+    viewer/placeholderframe.cpp
+    viewer/waitingframe.h
+    viewer/waitingframe.cpp
     )
 
 set(READER

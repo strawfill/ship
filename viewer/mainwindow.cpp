@@ -4,20 +4,21 @@
 #include <QMimeData>
 #include <QSettings>
 #include <QTemporaryFile>
-#include <QDir> // remove me
 
 #include "algoannealing.h"
 #include "algobruteforce.h"
 #include "debugcatcher.h"
 #include "graphicsitemzoomer.h"
 #include "graphicsviewzoomer.h"
-#include "prepareddata.h"
 #include "patherrordetector.h"
+#include "placeholderframe.h"
+#include "prepareddata.h"
 #include "rawdata.h"
 #include "simulationscene.h"
 #include "sourceerrordetector.h"
 #include "sourcefilereader.h"
 #include "movestopathconverter.h"
+#include "waitingframe.h"
 
 #include "mainwindow.h"
 #include "./ui_mainwindow.h"
@@ -26,6 +27,8 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
     , scene(new SimulationScene(this))
+    , placeholderFrame(new PlaceholderFrame(this))
+    , waitingFrame(new WaitingFrame(this))
 {
     ui->setupUi(this);
     // пока он не имеет смысла, и не понятно, будет ли иметь в будущем
@@ -33,10 +36,15 @@ MainWindow::MainWindow(QWidget *parent)
     // чтобы второй был минимального размера
     ui->splitter->setSizes({10000, 1});
 
+    ui->simulationViewLayout->addWidget(placeholderFrame);
+    ui->simulationViewLayout->addWidget(waitingFrame);
+    setCurrentSimulationWindowForce(SimulationWindow::placeholder);
+    setCurrentSimulationWindowForce(SimulationWindow::waiter);
+
     connect(DebugCatcher::instance(), &DebugCatcher::messageRecieved, ui->plainTextEdit, &QPlainTextEdit::appendPlainText);
 
     connect(ui->tb_startpause, &QToolButton::clicked, scene, &SimulationScene::startPauseSimulation);
-    connect(scene, &SimulationScene::startPauseChanged, this, &MainWindow::setStartPauseButtonPixmap);
+    connect(scene, &SimulationScene::startPauseChanged, this, &MainWindow::setStartPauseButtonPixmapState);
     //connect(ui->tb_pause, &QToolButton::clicked, scene, &SimulationScene::pauseSimulation);
     connect(ui->tb_stop, &QToolButton::clicked, scene, &SimulationScene::stopSimulation);
     connect(ui->doubleSpinBox_speed, QOverload<double>::of(&QDoubleSpinBox::valueChanged), scene, &SimulationScene::setSimulationSpeed);
@@ -51,7 +59,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(itemZoomer, &GraphicsItemZoomer::zoomRequested, scene, &SimulationScene::zoomSimulation);
 
     loadSettings();
-    setStartPauseButtonPixmap(false);
+    setStartPauseButtonPixmapState(false);
 
     initActions();
 #if 0
@@ -88,6 +96,20 @@ void MainWindow::initActions()
     stop->setShortcut(QKeySequence{Qt::CTRL + Qt::Key_R});
     connect(stop, &QAction::triggered, scene, &SimulationScene::stopSimulation);
     addAction(stop);
+}
+
+void MainWindow::setCurrentSimulationWindow(MainWindow::SimulationWindow type)
+{
+    if (windowType != type)
+        setCurrentSimulationWindowForce(type);
+}
+
+void MainWindow::setCurrentSimulationWindowForce(MainWindow::SimulationWindow type)
+{
+    windowType = type;
+    ui->graphicsView->setVisible(type == SimulationWindow::viewer);
+    placeholderFrame->setVisible(type == SimulationWindow::placeholder);
+    waitingFrame->setVisible(type == SimulationWindow::waiter);
 }
 
 MainWindow::~MainWindow()
@@ -129,7 +151,7 @@ void MainWindow::saveSettings()
     s.endGroup();
 }
 
-void MainWindow::setStartPauseButtonPixmap(bool isStarted)
+void MainWindow::setStartPauseButtonPixmapState(bool isStarted)
 {
     if (isStarted) {
         ui->tb_startpause->setIcon(QIcon(":/pause.png"));
@@ -209,6 +231,7 @@ void MainWindow::processFile(const QString &filename)
 {
     Q_ASSERT(QFileInfo(filename).isFile());
 
+    setCurrentSimulationWindow(SimulationWindow::placeholder);
     ui->graphicsView->resetTransform();
 
     DebugCatcher::instance()->clearWaringsCount();
@@ -233,6 +256,10 @@ void MainWindow::processFile(const QString &filename)
         if (DebugCatcher::instance()->warningsCount())
             return;
     }
+    // ошибок не обнаружено
+    setCurrentSimulationWindow(SimulationWindow::waiter);
+    qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+
     // разрешим перетягивание
     ui->graphicsView->setDragMode(QGraphicsView::ScrollHandDrag);
     viewZoomer->set_enable(true);
@@ -255,6 +282,7 @@ void MainWindow::processFile(const QString &filename)
 
         // отрисуем пустые трассы
         scene->setSources(ds, dd);
+        setCurrentSimulationWindow(SimulationWindow::viewer);
         return;
     }
 #if 1
@@ -268,6 +296,7 @@ void MainWindow::processFile(const QString &filename)
 
 
     scene->setSources(ds, dd);
+    setCurrentSimulationWindow(SimulationWindow::viewer);
 
     if (dd.has) {
         ui->plainTextEdit->appendPlainText(

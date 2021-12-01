@@ -93,22 +93,26 @@
             <number>2</number>
            </property>
            <item row="0" column="0">
-            <layout class="QVBoxLayout" name="verticalLayout">
+            <layout class="QVBoxLayout" name="verticalLayout" stretch="1,0">
              <item>
-              <widget class="IgnoreDndGraphicsView" name="graphicsView">
-               <property name="verticalScrollBarPolicy">
-                <enum>Qt::ScrollBarAlwaysOff</enum>
-               </property>
-               <property name="horizontalScrollBarPolicy">
-                <enum>Qt::ScrollBarAlwaysOff</enum>
-               </property>
-               <property name="sizeAdjustPolicy">
-                <enum>QAbstractScrollArea::AdjustToContentsOnFirstShow</enum>
-               </property>
-               <property name="renderHints">
-                <set>QPainter::Antialiasing|QPainter::TextAntialiasing</set>
-               </property>
-              </widget>
+              <layout class="QVBoxLayout" name="simulationViewLayout">
+               <item>
+                <widget class="IgnoreDndGraphicsView" name="graphicsView">
+                 <property name="verticalScrollBarPolicy">
+                  <enum>Qt::ScrollBarAlwaysOff</enum>
+                 </property>
+                 <property name="horizontalScrollBarPolicy">
+                  <enum>Qt::ScrollBarAlwaysOff</enum>
+                 </property>
+                 <property name="sizeAdjustPolicy">
+                  <enum>QAbstractScrollArea::AdjustToContentsOnFirstShow</enum>
+                 </property>
+                 <property name="renderHints">
+                  <set>QPainter::Antialiasing|QPainter::TextAntialiasing</set>
+                 </property>
+                </widget>
+               </item>
+              </layout>
              </item>
              <item>
               <layout class="QHBoxLayout" name="horizontalLayout_2">

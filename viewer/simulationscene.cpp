@@ -76,10 +76,6 @@ void SimulationScene::clear()
     resetTime();
 
     scene->setSceneRect(QRect());
-    // добавим плейсхолдер
-    scene->addText("Для начала работы перетащите или вставьте через " +
-                   QKeySequence(QKeySequence::Paste).toString() +
-                   "\n       сюда файл или текст с исходными данными");
 }
 
 void SimulationScene::startSimulation()
@@ -244,11 +240,11 @@ void SimulationScene::initSceneItems()
     data->clearItems();
     scene->clear();
 
-    QPen pen{ Qt::gray };
+    QPen scalePen{ Qt::gray };
 
     // чтобы начало координат было
-    scene->addLine(-100, 0, 100, 0, pen);
-    scene->addLine(0, -100, 0, 100, pen);
+    scene->addLine(-100, 0, 100, 0, scalePen);
+    scene->addLine(0, -100, 0, 100, scalePen);
 
 
     // чтобы был понятен масштаб
@@ -267,14 +263,14 @@ void SimulationScene::initSceneItems()
 
 
 
-    scene->addLine(label, -2, label, 2, pen);
+    scene->addLine(label, -2, label, 2, scalePen);
     auto textP = scene->addText(string);
     textP->setPos(label - textP->boundingRect().width()/2, 0);
 
 
-    scene->addLine(-label, -2, -label, 2, pen);
-    scene->addLine(-2, -label, 2, -label, pen);
-    scene->addLine(-2, label, 2, label, pen);
+    scene->addLine(-label, -2, -label, 2, scalePen);
+    scene->addLine(-2, -label, 2, -label, scalePen);
+    scene->addLine(-2, label, 2, label, scalePen);
 
 
 

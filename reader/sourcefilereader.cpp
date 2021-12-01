@@ -409,7 +409,16 @@ void SourceFileReader::readPath()
 
         in.readLine();
 
-        if (in.lineIsBlockEnd() || checkForOtherBlockStart()) {
+        if (in.lineIsBlockEnd()) {
+            if (data->path.size() != 2) {
+                qWarning().noquote() << QString("Строка %1. В %2 ожидалось стретить 2 маршрута "
+                                                "(один для шутера и один для укладчика), но встречено %3")
+                                        .arg(in.strLineNumber()).arg(in.currentFormatString).arg(data->path.size());
+            }
+            break;
+        }
+
+        if (checkForOtherBlockStart()) {
             break;
         }
 

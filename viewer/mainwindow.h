@@ -8,7 +8,11 @@ namespace Ui { class MainWindow; }
 QT_END_NAMESPACE
 
 class QMimeData;
+
 class SimulationScene;
+class PlaceholderFrame;
+class WaitingFrame;
+
 class GraphicsItemZoomer;
 class GraphicsViewZoomer;
 
@@ -36,16 +40,22 @@ private:
 
     void initActions();
 
+    enum class SimulationWindow { viewer, placeholder, waiter };
+    void setCurrentSimulationWindow(SimulationWindow type);
+    void setCurrentSimulationWindowForce(SimulationWindow type);
+
 private slots:
-    void setStartPauseButtonPixmap(bool isStarted);
+    void setStartPauseButtonPixmapState(bool isStarted);
 
 private:
     Ui::MainWindow *ui;
     SimulationScene *scene{ nullptr };
+    PlaceholderFrame *placeholderFrame{ nullptr };
+    WaitingFrame *waitingFrame{ nullptr };
     GraphicsItemZoomer *itemZoomer{ nullptr };
     GraphicsViewZoomer *viewZoomer{ nullptr };
 
-    QString fileData;
+    SimulationWindow windowType{ SimulationWindow::placeholder };
 
 };
 #endif // MAINWINDOW_H
