@@ -46,7 +46,10 @@
        <bool>false</bool>
       </property>
       <widget class="QWidget" name="horizontalLayoutWidget">
-       <layout class="QHBoxLayout" name="horizontalLayout" stretch="1">
+       <layout class="QVBoxLayout" name="verticalLayout_3" stretch="1,0">
+        <property name="spacing">
+         <number>0</number>
+        </property>
         <item>
          <widget class="QGroupBox" name="groupBox_simulation">
           <property name="title">
@@ -65,13 +68,22 @@
            <property name="bottomMargin">
             <number>2</number>
            </property>
-           <property name="spacing">
+           <property name="horizontalSpacing">
             <number>2</number>
+           </property>
+           <property name="verticalSpacing">
+            <number>0</number>
            </property>
            <item row="0" column="0">
             <layout class="QVBoxLayout" name="verticalLayout" stretch="1">
+             <property name="spacing">
+              <number>0</number>
+             </property>
              <item>
               <layout class="QVBoxLayout" name="simulationViewLayout">
+               <property name="spacing">
+                <number>0</number>
+               </property>
                <item>
                 <widget class="IgnoreDndGraphicsView" name="graphicsView">
                  <property name="verticalScrollBarPolicy">
@@ -95,13 +107,6 @@
           </layout>
          </widget>
         </item>
-       </layout>
-      </widget>
-      <widget class="QWidget" name="verticalLayoutWidget_2">
-       <layout class="QVBoxLayout" name="verticalLayout_2">
-        <property name="spacing">
-         <number>0</number>
-        </property>
         <item>
          <widget class="QWidget" name="simulationParams" native="true">
           <layout class="QGridLayout" name="gridLayout">
@@ -124,6 +129,12 @@
             <layout class="QHBoxLayout" name="simulationParamsLayout">
              <property name="spacing">
               <number>3</number>
+             </property>
+             <property name="leftMargin">
+              <number>2</number>
+             </property>
+             <property name="rightMargin">
+              <number>2</number>
              </property>
              <item>
               <widget class="QToolButton" name="tb_startpause">
@@ -245,6 +256,13 @@ Ctrl+R</string>
           </layout>
          </widget>
         </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="verticalLayoutWidget_2">
+       <layout class="QVBoxLayout" name="verticalLayout_2">
+        <property name="spacing">
+         <number>0</number>
+        </property>
         <item>
          <widget class="Line" name="line_3">
           <property name="frameShadow">
