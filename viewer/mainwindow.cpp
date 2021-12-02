@@ -67,6 +67,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     ui->graphicsView->setDragMode(QGraphicsView::ScrollHandDrag);
     ui->graphicsView->setOptimizationFlag(QGraphicsView::DontSavePainterState);
+    // чтобы не было артефактов при перемещении сцены с помощью мыши
+    // также это ускоряет перерисовку при большом количестве трасс
     ui->graphicsView->setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
     viewZoomer->set_enable(true);
 
@@ -114,12 +116,13 @@ void MainWindow::initActions()
 
 void MainWindow::prepareWorker()
 {
+    worker->setProgressWatcher(waitingFrame->progressBarSetter());
+
     worker->moveToThread(workerThread);
     // теперь они в разных потоках и поэтому будет соединение через очередь
     connect(workerThread, &QThread::finished, worker, &QObject::deleteLater);
     connect(this, &MainWindow::startWorkerRequest, worker, &Worker::start);
     connect(this, &MainWindow::stopWorkerRequest, worker, &Worker::stop);
-    connect(worker, &Worker::progressChanged, waitingFrame, &WaitingFrame::changeProgressBarValue);
     connect(worker, &Worker::ended, this, &MainWindow::workerEndWork);
     workerThread->start();
 }

@@ -29,6 +29,7 @@ WaitingFrame::WaitingFrame(QWidget *parent)
     , progressBar(new QProgressBar(this))
     , labelTimer(new QTimer(this))
     , startSimulationDelay(new QTimer(this))
+    , progressBarUpdater(new QTimer(this))
 {
     setFrameStyle(QFrame::NoFrame);
 
@@ -46,6 +47,7 @@ WaitingFrame::WaitingFrame(QWidget *parent)
     viewer->setMinimumSize(250, 250);
     viewer->setScene(scene->getScene());
 
+    progressBar->setRange(0, progressBarSteps);
     progressBar->setValue(0);
     progressBar->setFixedHeight(6);
     progressBar->setTextVisible(false);
@@ -58,17 +60,13 @@ WaitingFrame::WaitingFrame(QWidget *parent)
     connect(scene, &SimulationScene::startPauseChanged, this, &WaitingFrame::simulationStateChanged);
     connect(labelTimer, &QTimer::timeout, this, &WaitingFrame::updateDotsInLabel);
     connect(startSimulationDelay, &QTimer::timeout, this, &WaitingFrame::startSimulation);
+    connect(progressBarUpdater, &QTimer::timeout, this, &WaitingFrame::updateProgressBarValue);
 }
 
 void WaitingFrame::setRule(WaitingFrame::Rule type)
 {
     if (rule != type)
         setRuleForce(type);
-}
-
-void WaitingFrame::changeProgressBarValue(int percents)
-{
-    progressBar->setValue(percents);
 }
 
 void WaitingFrame::setRuleForce(WaitingFrame::Rule type)
@@ -85,8 +83,11 @@ void WaitingFrame::setRuleForce(WaitingFrame::Rule type)
 void WaitingFrame::showEvent(QShowEvent *event)
 {
     show = true;
+    watchedProgressPart = 0;
+    updateProgressBarValue();
     createSimulation();
     labelTimer->start(1000);
+    progressBarUpdater->start(20);
 
     QFrame::showEvent(event);
 }
@@ -97,6 +98,7 @@ void WaitingFrame::hideEvent(QHideEvent *event)
     scene->stopSimulation();
     scene->clear();
     labelTimer->stop();
+    progressBarUpdater->stop();
 
     QFrame::hideEvent(event);
 }
@@ -171,6 +173,13 @@ void WaitingFrame::updateDotsInLabel()
         label->setText(label->text().mid(0, label->text().size()-3) + "...");
     else if (label->text().endsWith("..."))
         label->setText(label->text().mid(0, label->text().size()-3) + ".  ");
+}
+
+void WaitingFrame::updateProgressBarValue()
+{
+    const int current{ int(watchedProgressPart * progressBarSteps) };
+    if (progressBar->value() != current)
+        progressBar->setValue(current);
 }
 
 void WaitingFrame::resizeEvent(QResizeEvent *event)

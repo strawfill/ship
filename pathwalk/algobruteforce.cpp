@@ -4,28 +4,11 @@
 #include "movestopathconverter.h"
 #include <QElapsedTimer>
 
-#include <QtConcurrent>
-
 AlgoBruteForce::AlgoBruteForce(const prepared::DataStatic ads)
     : ds(ads)
 {
     ds.removeDummyShips();
 }
-
-prepared::DataDynamic AlgoBruteForce::find()
-{
-    double test;
-    return find(test);
-
-    // TO DO TODO
-    QAtomicInt t;
-
-    using AtimicDouble = std::atomic<double>;
-    AtimicDouble d;
-
-
-}
-
 
 static ShipMovesVector unic(const ShipMovesVector &init) {
     static QVector<char> ch;
@@ -45,7 +28,13 @@ static ShipMovesVector unic(const ShipMovesVector &init) {
     return result;
 }
 
-prepared::DataDynamic AlgoBruteForce::find(double &progress)
+
+#define SET_PROGRESS(expr) \
+    if (progress) \
+        *progress = (expr)\
+
+
+prepared::DataDynamic AlgoBruteForce::find(double *progress)
 {
     QElapsedTimer tm; tm.start();
 
@@ -82,20 +71,20 @@ prepared::DataDynamic AlgoBruteForce::find(double &progress)
         --tempSize;
     }
 
-    double progressStep;
+    double progressAll = 1;
+    qlonglong progressCur{};
     {
-        // TO DO TODO
-        // обнулим всё
-        progress = 0.;
+        progressAll *= ds.handlers.size();
+        progressAll *= ds.shooters.size();
 
         qlonglong perm{1};
-        int temp{ 2*size };
+        int temp{ size2 };
         while (temp) {
             perm *= temp;
             --temp;
         }
 
-        progressStep = double(perm) / (1LL << size) / ds.handlers.size() / ds.shooters.size();
+        progressAll += perm / (1LL << size);
     }
 
     splacesVariants.reserve(permutations);
@@ -117,8 +106,7 @@ prepared::DataDynamic AlgoBruteForce::find(double &progress)
             for (int i = 0; i < size2; ++i)
                 hplaces.at(i) = i/2;
             do {
-                progress += progressStep;
-
+                SET_PROGRESS(++progressCur/progressAll);
 
                 for (int i = 0; i < size2; ++i) {
                     hmoves[i] = ShipMove{short(hplaces.at(i)), false};
@@ -153,40 +141,6 @@ prepared::DataDynamic AlgoBruteForce::find(double &progress)
                             int hours{ converter.calculateHours(hmoves, smoves) };
                             ++varvara;
 
-#if 0
-                            if (hours > 0) {
-                                auto d1 { qDebug().nospace() };
-                                d1 << "H ";
-                                for (const auto & m : qAsConst(hmoves))
-                                    d1 << m.trac() << (m.isP1Start ? "t" : "f") << " ";
-                                d1 << "; S ";
-                                for (const auto & m : qAsConst(smoves))
-                                    d1 << m.trac() << (m.isP1Start ? "t" : "f") << " ";
-                                d1 << " = " << hours;
-                            }
-#endif
-#if 0
-                            if (hours > 0) {
-                                QString path;
-                                path += "H ";
-                                for (const auto & m : qAsConst(hmoves))
-                                    path += QString::number(m.trac()) + (m.isP1Start ? "t" : "f") + " ";
-                                path += "; S ";
-                                for (const auto & m : qAsConst(smoves))
-                                    path += QString::number(m.trac()) + (m.isP1Start ? "t" : "f") + " ";
-
-
-                                bool un = true;
-                                auto uni = unic(hmoves);
-                                for (int i = 0; i < smoves.size(); ++i) {
-                                    if (uni.at(i).trac() != smoves.at(i).trac()) {
-                                        un = false;
-                                        break;
-                                    }
-                                }
-
-                            }
-#endif
 
                             if (hours > 0 && hours < time) {
                                 result = converter.createDD(hmoves, smoves);

@@ -8,12 +8,7 @@ class AlgoBruteForce
 public:
     AlgoBruteForce(const prepared::DataStatic ads);
 
-    prepared::DataDynamic find();
-
-
-
-private:
-    prepared::DataDynamic find(double &progress);
+    prepared::DataDynamic find(double *progress=nullptr);
 
 private:
     prepared::DataStatic ds;

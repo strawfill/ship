@@ -21,8 +21,7 @@ public:
 
     void setRule(Rule type);
 
-public slots:
-    void changeProgressBarValue(int percents);
+    double *progressBarSetter() { return &watchedProgressPart; }
 
     // QWidget interface
 protected:
@@ -37,6 +36,7 @@ private:
     void simulationStateChanged();
     void resizeSceneToViewSize();
     void updateDotsInLabel();
+    void updateProgressBarValue();
 
 private:
     QGraphicsView *viewer{ nullptr };
@@ -45,8 +45,11 @@ private:
     QProgressBar *progressBar{ nullptr };
     QTimer *labelTimer{ nullptr };
     QTimer *startSimulationDelay{ nullptr };
+    QTimer *progressBarUpdater{ nullptr };
     Rule rule{ Rule::see };
+    double watchedProgressPart{};
     bool show{ false };
+    enum{ progressBarSteps = 3000 };
 };
 
 #endif // WAITINGFRAME_H

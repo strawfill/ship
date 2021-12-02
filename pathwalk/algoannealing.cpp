@@ -5,31 +5,11 @@
 #include "sortviacrowding.h"
 #include <QElapsedTimer>
 
-#include <QtConcurrent>
-
 AlgoAnnealing::AlgoAnnealing(const prepared::DataStatic ads)
     : ds(ads)
 {
     ds.removeDummyShips();
 }
-
-prepared::DataDynamic AlgoAnnealing::find()
-{
-    double test;
-
-    auto res = find(test);
-
-    return find(test);
-
-    // TO DO TODO
-    QAtomicInt t;
-
-    using AtimicDouble = std::atomic<double>;
-    AtimicDouble d;
-
-
-}
-
 
 static void unic(const ShipMovesVector &init, ShipMovesVector &target, QVector<char> &ch) {
     if (ch.size() != init.size()/2)
@@ -58,6 +38,9 @@ struct AnnealingData
     QVector<char> ch;
     int opttime{INT_MAX};
     int time{INT_MAX};
+
+    AnnealingData(MovesToPathConverter &c, ShipMovesVector &opth, ShipMovesVector &h, ShipMovesVector &s)
+        : converter(c), opthmoves(opth), hmoves(h), smoves(s) {}
 
     void initOpt()
     {
@@ -220,7 +203,14 @@ inline bool doChangeDirection(AnnealingData &data, double temperature)
 
 } // end anonymous namespace
 
-prepared::DataDynamic AlgoAnnealing::find(double &progress)
+
+
+#define SET_PROGRESS(expr) \
+    if (progress) \
+        *progress = (expr)\
+
+
+prepared::DataDynamic AlgoAnnealing::find(double *progress)
 {
     QElapsedTimer tm; tm.start(); int s0{}, s1{}, s2{}, s3{}, s4{};
 
@@ -254,6 +244,12 @@ prepared::DataDynamic AlgoAnnealing::find(double &progress)
 
     s0 = data.time;
 
+
+    qlonglong progressCur{};
+    double progressAll = 0;
+    progressAll += calculations(100000, 10, 0.05, 0.8);
+    progressAll += calculations(10000, 10, 0.05, 0.8);
+
     if (pathCrowded.size() > 2) {
         // это значит, что трассы изначально были скучены и мы их перетасовали
         // попытаемся этим воспользоваться
@@ -271,14 +267,17 @@ prepared::DataDynamic AlgoAnnealing::find(double &progress)
             }
         } while (permutations < 100000 && std::next_permutation(pathCrowded.begin(), pathCrowded.end()));
         qDebug() << "perms" << permutations << "with time" << tt.nsecsElapsed() / 1e6 << "ms"
-                 << permutations * 1e6 / tt.nsecsElapsed();
+                 << permutations * 1e6 / tt.nsecsElapsed() << "per ms" << "and all time" << tm.nsecsElapsed() / 1e6 << "ms";
         ds.tracs = applyPath(bestPath, initTracOrder);
         data.calculateHours();
 
         s1 = data.time;
 
+        progressAll += calculations(30000, 10, 0.005, 0.8);
+
         for (double temperature = 10; temperature > 0.005; temperature *= 0.8) {
-            for (int i = 0; i < 3000; ++i) {
+            for (int i = 0; i < 30000; ++i) {
+                SET_PROGRESS(++progressCur/progressAll);
                 ++varvara;
                 //doChangePlace(data, temperature);
                 //doChangeDirection(data, temperature);
@@ -306,9 +305,9 @@ prepared::DataDynamic AlgoAnnealing::find(double &progress)
 
 #if 1
 #if 1
-    //for (int temperature = 10; temperature; temperature--) {
     for (double temperature = 10; temperature > 0.05; temperature *= 0.8) {
         for (int i = 0; i < 100000; ++i) {
+            SET_PROGRESS(++progressCur/progressAll);
             ++varvara;
             doChangePlaceMulty(data, temperature);
         }
@@ -317,8 +316,9 @@ prepared::DataDynamic AlgoAnnealing::find(double &progress)
     }
     s3 = data.time;
 #endif
-    for (double temperature = 50; temperature > 0.05; temperature *= 0.8) {
+    for (double temperature = 10; temperature > 0.05; temperature *= 0.8) {
         for (int i = 0; i < 10000; ++i) {
+            SET_PROGRESS(++progressCur/progressAll);
             ++varvara;
             doChangePlace(data, temperature);
             doChangeDirection(data, temperature);
@@ -334,7 +334,7 @@ prepared::DataDynamic AlgoAnnealing::find(double &progress)
 
 
     auto elaps = tm.elapsed();
-    qDebug() << "AlgoAnnealing n =" << size << "with" << elaps << "ms, count:" << varvara;
+    qDebug() << "AlgoAnnealing n =" << size << "with" << elaps << "ms, count:" << varvara << progressAll;
     qDebug() << "h:" << ds.handlers.size() << "s:" << ds.shooters.size();
     qDebug() << "select h:" << result.handlerName << "s:" << result.shooterName;
     qDebug() << "time" << data.time;
@@ -342,5 +342,13 @@ prepared::DataDynamic AlgoAnnealing::find(double &progress)
     qDebug() << "speed:" << double(varvara) / elaps;
     qDebug() << "ops time in h:" << s0 << s1 << s2 << s3 << s4 << "h";
 
+    return result;
+}
+
+int AlgoAnnealing::calculations(int itersForCurrentTemperature, double init, double stop, double mulstep)
+{
+    int result{};
+    for (double temperature = init; temperature > stop; temperature *= mulstep)
+        result += itersForCurrentTemperature;
     return result;
 }

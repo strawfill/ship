@@ -98,3 +98,4 @@ set_target_properties(${PROJECT_NAME} PROPERTIES
 
 
 #target_compile_options(${PROJECT_NAME} PRIVATE -O3)
+#target_compile_options(${PROJECT_NAME} PRIVATE -O2 -ftree-vectorize -fopt-info-vec-optimized )

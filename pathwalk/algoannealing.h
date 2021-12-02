@@ -8,12 +8,10 @@ class AlgoAnnealing
 public:
     AlgoAnnealing(const prepared::DataStatic ads);
 
-    prepared::DataDynamic find();
-
-
+    prepared::DataDynamic find(double *progress=nullptr);
 
 private:
-    prepared::DataDynamic find(double &progress);
+    int calculations(int itersForCurrentTemperature, double init, double mulstep, double stop);
 
 private:
     prepared::DataStatic ds;

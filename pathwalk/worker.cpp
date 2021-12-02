@@ -6,7 +6,9 @@
 
 #include <QtConcurrent>
 
-Worker::Worker(QObject *parent) : QObject(parent)
+Worker::Worker(QObject *parent, double *progress)
+    : QObject(parent)
+    , progressParam(progress)
 {
 }
 
@@ -16,20 +18,24 @@ struct InputData
 {
     prepared::DataStatic data;
     int seed;
+    double *progress{ nullptr };
 };
 
 prepared::DataDynamic calculate(const InputData & source)
 {
-    qsrand(source.seed);
-    return AlgoAnnealing(source.data).find();
+    qsrand(unsigned(source.seed));
+#if 1
+    return AlgoAnnealing(source.data).find(source.progress);
+#else
+    return AlgoBruteForce(source.data).find(source.progress);
+#endif
 }
 
 } // anonymous namespace
 
 void Worker::start()
 {
-    const int numThreads{ QThread::idealThreadCount() };
-    qDebug() << "threads" << numThreads;
+    const int numThreads{ qMax(1, QThread::idealThreadCount()) };
 
     QVector<InputData> vector;
     vector.reserve(numThreads);
@@ -37,13 +43,14 @@ void Worker::start()
         vector.append({ds, i});
     }
 
-    auto results = QtConcurrent::blockingMapped(vector, calculate);
-    qDebug() << "we are champions";
+    vector.first().progress = progressParam;
 
-    QVector<qlonglong> costs;
+    auto results = QtConcurrent::blockingMapped(vector, calculate);
+
+    QVector<QPair<qlonglong, int> > costs;
     costs.reserve(results.size());
     for (const auto &dd : qAsConst(results)) {
-        costs.append(prepared::totalCost(ds, dd) + prepared::totalHours(dd));
+        costs.append({prepared::totalCost(ds, dd), prepared::totalHours(dd)});
         qDebug() << "result ..." << costs.last() << "h" << prepared::totalHours(dd);
     }
 
