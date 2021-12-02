@@ -103,8 +103,8 @@ void ShipGraphicsItem::setShipPosition(double x, double y)
     if (pos() != current) {
         // система координат конечно немного не та...
         // а делать scale(1, -1) на view - тоже не помогает особо, ведь сторонние эффекты всё портят
+        prepareGeometryChange();
         setPos(current.x(), -current.y());
-        update();
     }
 }
 
@@ -147,8 +147,8 @@ void ShipGraphicsItem::setShipRotation(double rotation, double hourInThatTrac, d
 
     if (inewrot != icurrot) {
         if (hourInThatTrac > rotationTime || tracPart > rotationTracPart) {
+            prepareGeometryChange();
             setRotation(inewrot);
-            update();
             return;
         }
 
@@ -163,9 +163,8 @@ void ShipGraphicsItem::setShipRotation(double rotation, double hourInThatTrac, d
         const double condition2{ tracPart / rotationTracPart };
 
         double resrot{ rotationAtTracStart + delta * qBound(0., qMax(condition1, condition2), 1.) };
+        prepareGeometryChange();
         setRotation(qRound(resrot));
-
-        update();
     }
 }
 

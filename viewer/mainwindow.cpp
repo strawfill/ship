@@ -66,6 +66,8 @@ MainWindow::MainWindow(QWidget *parent)
     prepareWorker();
 
     ui->graphicsView->setDragMode(QGraphicsView::ScrollHandDrag);
+    ui->graphicsView->setOptimizationFlag(QGraphicsView::DontSavePainterState);
+    ui->graphicsView->setViewportUpdateMode(QGraphicsView::FullViewportUpdate);
     viewZoomer->set_enable(true);
 
 #if 0
