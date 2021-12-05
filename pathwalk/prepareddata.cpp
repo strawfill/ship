@@ -252,6 +252,16 @@ void DataStatic::removeDummyShips()
     removeWorse(newh);
     removeWorse(news);
 
+    int minSensors{ 0 };
+    for (const auto & trac : qAsConst(tracs)) {
+        if (minSensors < trac.sensors())
+            minSensors = trac.sensors();
+    }
+    for (int i = handlers.size()-1; i >= 0; --i) {
+        if (handlers.at(i).sensors() < minSensors)
+            handlers.removeAt(i);
+    }
+
     handlers = newh;
     shooters = news;
 
