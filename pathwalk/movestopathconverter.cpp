@@ -145,6 +145,13 @@ int MovesToPathConverter::calculateHours(const ShipMovesVector &handlerVec, cons
     return qMax(shooter.hour, handler.hour);
 }
 
+qlonglong MovesToPathConverter::calculateCost(const ShipMovesVector &handlerVec, const ShipMovesVector &shooterVec)
+{
+    int hours{ calculateHours(handlerVec, shooterVec) };
+    int days { qCeil(hours / 24.) };
+    return handler.cost(days) + shooter.cost(days);
+}
+
 namespace {
 
 struct ProcessPathData

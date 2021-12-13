@@ -250,6 +250,28 @@ prepared::DataDynamic AlgoAnnealing::find(double *progress)
     progressAll += calculations(100000, 10, 0.05, 0.8);
     progressAll += calculations(10000, 10, 0.05, 0.8);
 
+
+    progressAll += ds.handlers.size() * ds.shooters.size();
+    int result_handler_index{ 0 };
+    int result_shooter_index{ 0 };
+    qlonglong bestCost{ converter.calculateCost(hmoves, smoves) };
+    // переберём все варианты кораблей
+    for (int hi = 0; hi < ds.handlers.size(); ++hi) {
+        for (int si = 0; si < ds.shooters.size(); ++si) {
+            SET_PROGRESS(++progressCur/progressAll);
+            converter.setShips(ds.handlers.at(hi), ds.shooters.at(si));
+            auto currentCost{ converter.calculateCost(hmoves, smoves) };
+            if (currentCost < bestCost) {
+                bestCost = currentCost;
+                result_handler_index = hi;
+                result_shooter_index = si;
+            }
+        }
+    }
+    converter.setShips(ds.handlers.at(result_handler_index), ds.shooters.at(result_shooter_index));
+    qDebug() << "result ships" << result_handler_index << result_shooter_index;
+
+
     if (pathCrowded.size() > 2) {
         // это значит, что трассы изначально были скучены и мы их перетасовали
         // попытаемся этим воспользоваться
@@ -292,16 +314,30 @@ prepared::DataDynamic AlgoAnnealing::find(double *progress)
 
             data.fromOpt();
         }
+
+
+        progressAll += ds.handlers.size() * ds.shooters.size();
+        int result_handler_index{ 0 };
+        int result_shooter_index{ 0 };
+        qlonglong bestCost{ converter.calculateCost(hmoves, smoves) };
+        // переберём все варианты кораблей ещё раз
+        for (int hi = 0; hi < ds.handlers.size(); ++hi) {
+            for (int si = 0; si < ds.shooters.size(); ++si) {
+                SET_PROGRESS(++progressCur/progressAll);
+                converter.setShips(ds.handlers.at(hi), ds.shooters.at(si));
+                auto currentCost{ converter.calculateCost(hmoves, smoves) };
+                if (currentCost < bestCost) {
+                    bestCost = currentCost;
+                    result_handler_index = hi;
+                    result_shooter_index = si;
+                }
+            }
+        }
+        converter.setShips(ds.handlers.at(result_handler_index), ds.shooters.at(result_shooter_index));
+        qDebug() << "result ships" << result_handler_index << result_shooter_index;
+
         s2 = data.time;
     }
-
-
-#if 0
-    for (int i = 0; i < 10; ++i) {
-        doChangeInitialInOp(data);
-        //qDebug() << "init change at" << i << "with time" << data.time;
-    }
-#endif
 
 #if 1
 #if 1

@@ -69,6 +69,7 @@ public:
 
     PathAndTime createPath(const ShipMovesVector &handlerVec, const ShipMovesVector &shooterVec);
     int calculateHours(const ShipMovesVector &handlerVec, const ShipMovesVector &shooterVec);
+    qlonglong calculateCost(const ShipMovesVector &handlerVec, const ShipMovesVector &shooterVec);
 
     prepared::DataDynamic createDD(const ShipMovesVector &handlerVec, const ShipMovesVector &shooterVec)
     { return createDD(createPath(handlerVec, shooterVec)); }
