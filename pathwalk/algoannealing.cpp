@@ -237,8 +237,11 @@ prepared::DataDynamic AlgoAnnealing::find(double *progress)
 
     AnnealingData data{ converter, opthmoves, hmoves, smoves };
 
-    for (short i = 0; i < size2; ++i)
-        hmoves[i] = ShipMove{short(i/2), bool(qrand()%2)};
+    for (short i = 0; i < size; ++i) {
+        bool direction{ bool(qrand()%2) };
+        hmoves[2*i] = ShipMove{short(i), direction};
+        hmoves[2*i+1] = ShipMove{short(i), !direction};
+    }
 
     data.calculateHours();
 
