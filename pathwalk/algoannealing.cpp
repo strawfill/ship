@@ -97,10 +97,7 @@ bool doChangePlaceMulty(AnnealingData &data, double temperature)
     // сузим интервал в зависимости от температуры
 
     // b может быть равен size, ведь он далее используется без включения
-    b = qBound(a+1, int(a+(b-a)*p+1), data.hmoves.size());
-
-    if (a == b)
-        ++b;
+    b = qBound(a, int(a+(b-a)*p+1), data.hmoves.size());
 
     //qDebug() << "data" << a << b << b-a;
 
@@ -169,6 +166,17 @@ bool doChangePlace(AnnealingData &data, double temperature)
 {
     int a = qrand() % data.hmoves.size();
     int b = qrand() % data.hmoves.size();
+    if (a > b)
+        std::swap(a, b);
+
+    double p = qExp(-(b-a)/temperature/100);
+    // сузим интервал в зависимости от температуры
+
+    if (qrand() % 2)
+        a = qBound(0, int(b-(b-a)*p), b);
+    else
+        b = qBound(a, int(a+(b-a)*p), data.hmoves.size()-1);
+
     return doChangePlace(data, temperature, a, b);
 }
 
