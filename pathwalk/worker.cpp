@@ -35,7 +35,11 @@ prepared::DataDynamic calculate(const InputData & source)
 
 void Worker::start()
 {
+#if 1
     const int numThreads{ qMax(1, QThread::idealThreadCount()) };
+#else
+    const int numThreads = 1;
+#endif
 
     QVector<InputData> vector;
     vector.reserve(numThreads);
@@ -49,9 +53,11 @@ void Worker::start()
 
     QVector<QPair<qlonglong, int> > costs;
     costs.reserve(results.size());
+    int thread{ -1 };
     for (const auto &dd : qAsConst(results)) {
+        ++thread;
         costs.append({prepared::totalCost(ds, dd), prepared::totalHours(dd)});
-        qDebug() << "result ..." << costs.last() << "h" << prepared::totalHours(dd);
+        qDebug() << "thread" << thread << costs.last() << "h" << prepared::totalHours(dd);
     }
 
     int index{ std::distance(costs.constBegin(), std::min_element(costs.constBegin(), costs.constEnd())) };

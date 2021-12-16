@@ -82,6 +82,7 @@ Path pathViaCrowding(const QVector<prepared::Trac> &tracs)
 
     auto best = finder.createPath(1);
     double bestCrowding{ tracCrowding(best, tracs) };
+    //qDebug() << "cr 1" << bestCrowding;
 
 
     int to{ qBound(4, int(2 * qSqrt(tracs.size())), 20) };
@@ -91,14 +92,13 @@ Path pathViaCrowding(const QVector<prepared::Trac> &tracs)
         const int adjust{ 3 };
         const double adjust_res{ qSqrt(adjust*adjust + i-1) - adjust + 1 };
         double crowding{ tracCrowding(temp, tracs) * adjust_res };
-        //qDebug() << "cr" << crowding << temp;
         // чем меньше скученность после разделения, тем лучше получаемый результат
+        //qDebug() << "cr" << i << crowding;
         if (bestCrowding > crowding) {
             bestCrowding = crowding;
             best = temp;
         }
     }
-    //qDebug() << "best" << bestCrowding << best;
     std::sort(best.begin(), best.end());
 
     return best;

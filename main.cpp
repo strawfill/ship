@@ -35,8 +35,8 @@ int main(int argc, char *argv[])
     int f{25000};
     int d{25000};
     auto val = [=](int m = 1){ return f*m + qrand()%d; };
-    for (int i = 0; i < 8; ++i) {
-        if (i % 8 == 0)
+    for (int i = 0; i < 70; ++i) {
+        if (i % 8 == 0 or 1)
             qDebug() << val() << val() << val() << val() << qrand()%30+20;
         else if (i % 8 == 1)
             qDebug() << -val() << val() << -val() << val() << qrand()%30+20;

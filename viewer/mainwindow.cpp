@@ -293,7 +293,8 @@ QString outputResult(const prepared::DataStatic & ds, const prepared::DataDynami
     }
 
     return s + " [" + QString::number(prepared::totalHours(dd)) + " ч / " +
-            QString::number(prepared::totalDays(dd)) + " дн.]";
+            QString::number(prepared::totalDays(dd)) + " дн. @ H: " +
+            dd.handlerName + ", S: " + dd.shooterName + " ]";
 };
 
 }
@@ -371,7 +372,6 @@ void MainWindow::workerEndWork()
         ui->plainTextEdit->appendPlainText(
                     "-- стоимость аренды по созданному маршруту равна " + outputResult(ds, dd));
 
-#if 1 // самотестирование, в целом потом стоит убрать
         QFile file("out.txt");
         if (file.open(QIODevice::Text|QIODevice::ReadWrite|QIODevice::Truncate)) {
             QTextStream ts(&file);
@@ -382,6 +382,7 @@ void MainWindow::workerEndWork()
             file.close();
         }
 
+#if 0 // самотестирование, в целом потом стоит убрать
         processFile("out.txt");
 #endif
     }
