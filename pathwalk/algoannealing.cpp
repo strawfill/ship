@@ -259,7 +259,7 @@ prepared::DataDynamic AlgoAnnealing::find(double *progress)
     qlonglong progressCur{};
     double progressAll = 0;
     progressAll += calculations(100000, 10, 0.05, 0.8);
-    progressAll += calculations(10000, 10, 0.05, 0.8);
+    progressAll += calculations(100000, 10, 0.05, 0.8);
 
 
     progressAll += ds.handlers.size() * ds.shooters.size();
@@ -362,9 +362,10 @@ prepared::DataDynamic AlgoAnnealing::find(double *progress)
         data.fromOpt();
     }
     s3 = data.time;
+    qDebug() << "next gen" << tm.nsecsElapsed() / 1e6 << "ms";
 #endif
     for (double temperature = 10; temperature > 0.05; temperature *= 0.8) {
-        for (int i = 0; i < 10000; ++i) {
+        for (int i = 0; i < 100000; ++i) {
             SET_PROGRESS(++progressCur/progressAll);
             ++varvara;
             doChangePlace(data, temperature);
@@ -386,7 +387,7 @@ prepared::DataDynamic AlgoAnnealing::find(double *progress)
     qDebug() << "select h:" << result.handlerName << "s:" << result.shooterName;
     qDebug() << "time" << data.time;
     qDebug() << "cost" << prepared::totalCost(ds, result);
-    qDebug() << "speed:" << double(varvara) / elaps;
+    qDebug() << "speed:" << double(varvara) / elaps << "with time" << elaps << "ms";
     qDebug() << "ops time in h:" << s0 << s1 << s2 << s3 << s4 << "h";
 
     return result;
