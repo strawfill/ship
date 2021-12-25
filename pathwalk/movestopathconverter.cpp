@@ -148,6 +148,8 @@ int MovesToPathConverter::calculateHours(const ShipMovesVector &handlerVec, cons
 qlonglong MovesToPathConverter::calculateCost(const ShipMovesVector &handlerVec, const ShipMovesVector &shooterVec)
 {
     int hours{ calculateHours(handlerVec, shooterVec) };
+    if (hours <= -1)
+        return -1;
     int days { qCeil(hours / 24.) };
     return handler.cost(days) + shooter.cost(days);
 }
@@ -199,9 +201,11 @@ bool processPath(ProcessPathData &data)
         const auto input{ data.moves.at(data.index) };
         char & calls = data.lineState[input.trac()];
         if (data.isHandler && calls == 1) {
+            // если calls == 1, то эту трассу должен шутер обрабатывать
             break;
         }
         if (!data.isHandler && calls != 1) {
+            // если calls != 1, то эту трассу должен не шутер обрабатывать
             break;
         }
         processed = true;
@@ -255,10 +259,8 @@ MovesToPathConverter::createPath(const ShipMovesVector &handlerVec, const ShipMo
 {
     lineState.clear();
     lineStateChanged.clear();
-    if (lineState.size() != ds.tracs.size()) {
-        lineState.resize(ds.tracs.size(), 0);
-        lineStateChanged.resize(ds.tracs.size(), 0);
-    }
+    lineState.resize(ds.tracs.size(), 0);
+    lineStateChanged.resize(ds.tracs.size(), 0);
 
     pat.handlerPath.clear();
     pat.shooterPath.clear();

@@ -49,6 +49,8 @@ struct AnnealingData
     }
     void fromOpt()
     {
+        if (opttime == INT_MAX)
+            return;
         hmoves = opthmoves;
         time = opttime;
     }
@@ -78,6 +80,9 @@ struct AnnealingData
     }
     prepared::DataDynamic getDD()
     {
+        if (time == INT_MAX) {
+            return {};
+        }
         fromOpt();
         updateSmoves();
         return converter.createDD(hmoves, smoves);
@@ -255,11 +260,14 @@ prepared::DataDynamic AlgoAnnealing::find(double *progress)
 
     s0 = data.time;
 
+    const int calcs1 = 10000;
+    const int calcs2 = 10000;
+    const int calcs3 = 30000;
 
     qlonglong progressCur{};
     double progressAll = 0;
-    progressAll += calculations(100000, 10, 0.05, 0.8);
-    progressAll += calculations(100000, 10, 0.05, 0.8);
+    progressAll += calculations(calcs2, 10, 0.05, 0.8);
+    progressAll += calculations(calcs3, 10, 0.05, 0.8);
 
 
     progressAll += ds.handlers.size() * ds.shooters.size();
@@ -272,7 +280,7 @@ prepared::DataDynamic AlgoAnnealing::find(double *progress)
             SET_PROGRESS(++progressCur/progressAll);
             converter.setShips(ds.handlers.at(hi), ds.shooters.at(si));
             auto currentCost{ converter.calculateCost(hmoves, smoves) };
-            if (currentCost < bestCost) {
+            if (currentCost > 0 && (bestCost < 0 || currentCost < bestCost)) {
                 bestCost = currentCost;
                 result_handler_index = hi;
                 result_shooter_index = si;
@@ -281,7 +289,6 @@ prepared::DataDynamic AlgoAnnealing::find(double *progress)
     }
     converter.setShips(ds.handlers.at(result_handler_index), ds.shooters.at(result_shooter_index));
     qDebug() << "result ships" << result_handler_index << result_shooter_index;
-
 
     if (pathCrowded.size() > 2) {
         // это значит, что трассы изначально были скучены и мы их перетасовали
@@ -306,10 +313,10 @@ prepared::DataDynamic AlgoAnnealing::find(double *progress)
 
         s1 = data.time;
 
-        progressAll += calculations(30000, 10, 0.005, 0.8);
+        progressAll += calculations(calcs1, 10, 0.005, 0.8);
 
         for (double temperature = 10; temperature > 0.005; temperature *= 0.8) {
-            for (int i = 0; i < 30000; ++i) {
+            for (int i = 0; i < calcs1; ++i) {
                 SET_PROGRESS(++progressCur/progressAll);
                 ++varvara;
                 //doChangePlace(data, temperature);
@@ -349,11 +356,10 @@ prepared::DataDynamic AlgoAnnealing::find(double *progress)
 
         s2 = data.time;
     }
-
 #if 1
 #if 1
     for (double temperature = 10; temperature > 0.05; temperature *= 0.8) {
-        for (int i = 0; i < 100000; ++i) {
+        for (int i = 0; i < calcs2; ++i) {
             SET_PROGRESS(++progressCur/progressAll);
             ++varvara;
             doChangePlaceMulty(data, temperature);
@@ -365,7 +371,7 @@ prepared::DataDynamic AlgoAnnealing::find(double *progress)
     qDebug() << "next gen" << tm.nsecsElapsed() / 1e6 << "ms";
 #endif
     for (double temperature = 10; temperature > 0.05; temperature *= 0.8) {
-        for (int i = 0; i < 100000; ++i) {
+        for (int i = 0; i < calcs3; ++i) {
             SET_PROGRESS(++progressCur/progressAll);
             ++varvara;
             doChangePlace(data, temperature);

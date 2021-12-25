@@ -382,7 +382,7 @@ void MainWindow::workerEndWork()
             file.close();
         }
 
-#if 0 // самотестирование, в целом потом стоит убрать
+#if 1 // самотестирование, в целом потом стоит убрать
         processFile("out.txt");
 #endif
     }
